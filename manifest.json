@@ -1,0 +1,22 @@
+{
+  "name": "RuXt Private AI Assistant",
+  "short_name": "RuXt AI",
+  "description": "Your intelligent, private AI personal assistant",
+  "start_url": "index.php",
+  "display": "standalone",
+  "background_color": "#fcfaf5",
+  "theme_color": "#fcfaf5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

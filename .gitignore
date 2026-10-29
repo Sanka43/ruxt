@@ -1,0 +1,22 @@
+# SQLite Databases & Backups
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+database/*.db*
+!database/.htaccess
+
+# User Uploaded Attachments
+uploads/attachments/*
+!uploads/attachments/.htaccess
+
+# Logs & Temp files
+*.log
+scratch/
+.env
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

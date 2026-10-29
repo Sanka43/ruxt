@@ -1,0 +1,11 @@
+# Deny direct script execution in uploads/attachments
+SetHandler default-handler
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|pl|py|cgi|sh|asp|aspx|exe|bat|cmd)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Allow viewing of media and documents
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
