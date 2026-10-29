@@ -250,7 +250,18 @@ $currentUser = getCurrentUser();
         </div>
 
         <!-- Sidebar Footer: Clean Profile & Hub Button with Logout -->
-        <div class="p-3 border-t border-[#ddd8cc] bg-[#f0ede4]">
+        <div class="p-3 border-t border-[#ddd8cc] bg-[#f0ede4] space-y-2">
+            <?php if (($currentUser['role'] ?? 'user') === 'admin'): ?>
+            <a href="dashboard.php" class="w-full flex items-center justify-between p-2 rounded-xl bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] transition-all shadow-sm group text-left cursor-pointer active:scale-[0.99]" title="Open Management Dashboard">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center text-white">
+                        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <span class="text-xs font-bold">Admin Dashboard</span>
+                </div>
+                <span class="text-[9px] bg-amber-500/30 text-amber-200 border border-amber-400/30 font-mono font-bold px-1.5 py-0.5 rounded-full uppercase">Manage</span>
+            </a>
+            <?php endif; ?>
             <div class="flex items-center gap-1.5">
                 <button id="openProfileBtn" type="button" onclick="window.openProfileModal()" class="flex-1 min-w-0 flex items-center justify-between p-2 rounded-2xl bg-[#ffffff] hover:bg-[#fffefa] border border-[#ddd8cc] hover:border-[#173d34]/40 transition-all shadow-sm group text-left cursor-pointer">
                     <div class="flex items-center space-x-2 min-w-0 flex-1">
@@ -948,6 +959,29 @@ $currentUser = getCurrentUser();
                                 <i data-lucide="chevron-right" class="w-4 h-4 text-[#68716d] group-hover:text-[#8c5e1e] group-hover:translate-x-0.5 transition-all"></i>
                             </div>
                         </button>
+
+                        <?php if (($currentUser['role'] ?? 'user') === 'admin'): ?>
+                        <!-- 4. Management Dashboard Link Card -->
+                        <a href="dashboard.php" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#ffffff] hover:bg-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] transition-all text-left shadow-sm hover:shadow-md group cursor-pointer active:scale-[0.99] block">
+                            <div class="flex items-center space-x-3.5 overflow-hidden flex-1">
+                                <div class="w-10 h-10 rounded-2xl bg-[#173d34] text-[#fcfaf5] flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="text-xs sm:text-sm font-bold text-[#202725] group-hover:text-[#173d34] transition-colors">
+                                            Management Dashboard
+                                        </div>
+                                        <span class="text-[9px] bg-amber-500/20 text-amber-800 border border-amber-500/30 font-mono font-bold px-1.5 py-0.5 rounded-full uppercase">Admin</span>
+                                    </div>
+                                    <p class="text-[11px] text-[#68716d] truncate mt-0.5">Manage workspaces, users, executive dream teams & platform tools</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2.5 flex-shrink-0 ml-2">
+                                <span class="text-xs bg-[#173d34] text-white px-2.5 py-0.5 rounded-full font-mono font-bold shadow-2xs">Open &rarr;</span>
+                            </div>
+                        </a>
+                        <?php endif; ?>
 
                     </div>
                 </div>

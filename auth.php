@@ -108,6 +108,38 @@ function requireLogin(bool $isApi = false): ?array {
     exit;
 }
 
+// Check if current user has administrator role
+function isAdmin(): bool {
+    $user = getCurrentUser();
+    return ($user && !empty($user['role']) && $user['role'] === 'admin');
+}
+
+// Require admin privileges; redirect or return 403
+function requireAdmin(bool $isApi = false): ?array {
+    $user = requireLogin($isApi);
+
+    if (empty($user['role']) || $user['role'] !== 'admin') {
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $isJsonRequest = $isApi || (strpos($uri, '/api/') !== false) || (strpos($accept, 'application/json') !== false);
+
+        if ($isJsonRequest) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Admin privileges required to access this resource.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        header("Location: index.php?error=access_denied");
+        exit;
+    }
+
+    return $user;
+}
+
 // Log in user
 function loginUser(array $user, bool $remember = false): void {
     if (session_status() === PHP_SESSION_NONE) {
