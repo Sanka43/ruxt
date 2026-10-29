@@ -352,3 +352,227 @@ function authenticateUser(string $identifier, string $password, bool $remember =
         'user' => $cleanUser
     ];
 }
+
+/**
+ * Retrieve Google OAuth Client ID from environment or database settings
+ */
+function getGoogleClientId(): string {
+    $envVal = getenv('GOOGLE_CLIENT_ID');
+    if (!empty($envVal)) {
+        return trim((string)$envVal);
+    }
+    if (isset($_ENV['GOOGLE_CLIENT_ID']) && !empty($_ENV['GOOGLE_CLIENT_ID'])) {
+        return trim((string)$_ENV['GOOGLE_CLIENT_ID']);
+    }
+    if (function_exists('getSetting')) {
+        return trim((string)getSetting('google_client_id', ''));
+    }
+    return '';
+}
+
+/**
+ * Retrieve Google OAuth Client Secret from environment or database settings
+ */
+function getGoogleClientSecret(): string {
+    $envVal = getenv('GOOGLE_CLIENT_SECRET');
+    if (!empty($envVal)) {
+        return trim((string)$envVal);
+    }
+    if (isset($_ENV['GOOGLE_CLIENT_SECRET']) && !empty($_ENV['GOOGLE_CLIENT_SECRET'])) {
+        return trim((string)$_ENV['GOOGLE_CLIENT_SECRET']);
+    }
+    if (function_exists('getSetting')) {
+        return trim((string)getSetting('google_client_secret', ''));
+    }
+    return '';
+}
+
+/**
+ * Authenticate or auto-register a user via Google Identity Services (GIS) ID Token
+ */
+function authenticateWithGoogle(string $idToken): array {
+    global $pdo;
+
+    $idToken = trim($idToken);
+    if (empty($idToken)) {
+        return ['success' => false, 'error' => 'Google authentication token is missing.'];
+    }
+
+    $configuredClientId = getGoogleClientId();
+
+    // Verify ID Token with Google's public tokeninfo endpoint
+    $verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+    $tokenData = null;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $verifyUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $tokenData = json_decode($response, true);
+        }
+    } else {
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 12,
+                'ignore_errors' => true
+            ]
+        ]);
+        $response = @file_get_contents($verifyUrl, false, $ctx);
+        if ($response) {
+            $decoded = json_decode($response, true);
+            if (!empty($decoded['sub'])) {
+                $tokenData = $decoded;
+            }
+        }
+    }
+
+    if (!$tokenData || empty($tokenData['sub'])) {
+        return ['success' => false, 'error' => 'Google token verification failed. The token may be expired or invalid.'];
+    }
+
+    // Validate token issuer
+    $validIssuers = ['accounts.google.com', 'https://accounts.google.com'];
+    if (empty($tokenData['iss']) || !in_array($tokenData['iss'], $validIssuers, true)) {
+        return ['success' => false, 'error' => 'Invalid token issuer.'];
+    }
+
+    // Validate audience if client ID is configured
+    if (!empty($configuredClientId) && !empty($tokenData['aud'])) {
+        if ($tokenData['aud'] !== $configuredClientId) {
+            return ['success' => false, 'error' => 'Google Client ID mismatch. This token was not issued for this application.'];
+        }
+    }
+
+    $googleId = (string)$tokenData['sub'];
+    $email = !empty($tokenData['email']) ? strtolower(trim($tokenData['email'])) : '';
+    $name = !empty($tokenData['name']) ? trim($tokenData['name']) : '';
+    $avatar = !empty($tokenData['picture']) ? trim($tokenData['picture']) : null;
+    $emailVerified = !empty($tokenData['email_verified']) && (
+        $tokenData['email_verified'] === true || 
+        $tokenData['email_verified'] === 'true' || 
+        $tokenData['email_verified'] === 1 || 
+        $tokenData['email_verified'] === '1'
+    );
+
+    if (empty($email) || !$emailVerified) {
+        return ['success' => false, 'error' => 'Your Google account email address must be verified.'];
+    }
+
+    if (empty($name)) {
+        $emailParts = explode('@', $email);
+        $name = ucfirst($emailParts[0]);
+    }
+
+    // 1. Check if user already exists by google_id
+    $user = getUserByGoogleId($googleId);
+
+    // 2. If not found by google_id, check by email
+    if (!$user) {
+        $user = getUserByUsernameOrEmail($email);
+        if ($user) {
+            // Link existing account to Google
+            linkUserGoogleId($user['id'], $googleId, $avatar);
+            $user = getUserById($user['id']);
+        }
+    }
+
+    // 3. If user does not exist at all, auto-register new account
+    if (!$user) {
+        $totalUsers = countUsers();
+        $role = ($totalUsers === 0) ? 'admin' : 'user';
+
+        // Derive valid unique username from email
+        $cleanEmailPrefix = preg_replace('/[^a-zA-Z0-9_\-]/', '', explode('@', $email)[0]);
+        if (strlen($cleanEmailPrefix) < 3) {
+            $cleanEmailPrefix = 'user_' . substr(md5($email), 0, 6);
+        }
+        $username = substr($cleanEmailPrefix, 0, 25);
+        $counter = 1;
+        while (getUserByUsernameOrEmail($username) !== null) {
+            $username = substr($cleanEmailPrefix, 0, 20) . '_' . $counter;
+            $counter++;
+        }
+
+        // Generate unguessable random password hash
+        $randomPassword = bin2hex(random_bytes(32));
+        $passwordHash = password_hash($randomPassword, PASSWORD_DEFAULT);
+
+        // Fallback avatar if Google did not supply picture
+        if (empty($avatar)) {
+            $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=173d34&color=fcfaf5&bold=true';
+        }
+
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO users (name, username, email, password_hash, avatar_url, role, google_id)
+                VALUES (:name, :username, :email, :hash, :avatar, :role, :gid)
+            ");
+            $stmt->execute([
+                ':name' => $name,
+                ':username' => $username,
+                ':email' => $email,
+                ':hash' => $passwordHash,
+                ':avatar' => $avatar,
+                ':role' => $role,
+                ':gid' => $googleId
+            ]);
+
+            $newUserId = (int)$pdo->lastInsertId();
+
+            // Initial user setup
+            if ($totalUsers === 0) {
+                setSetting('user_name', $name);
+                $pdo->exec("UPDATE sessions SET user_id = $newUserId WHERE user_id IS NULL");
+                $pdo->exec("UPDATE notes SET user_id = $newUserId WHERE user_id IS NULL");
+                $pdo->exec("UPDATE memories SET user_id = $newUserId WHERE user_id IS NULL");
+                $pdo->exec("UPDATE ventures SET user_id = $newUserId WHERE user_id IS NULL");
+                $pdo->exec("UPDATE projects SET user_id = $newUserId WHERE user_id IS NULL");
+            } else {
+                // Provision clean workspace & primary project
+                $insVenture = $pdo->prepare("
+                    INSERT INTO ventures (name, domain, description, icon, color, user_id) 
+                    VALUES ('Primary Workspace', 'General Operations', 'Main workspace for private AI assistance, strategic planning, and operational execution.', 'briefcase', 'indigo', :uid)
+                ");
+                $insVenture->execute([':uid' => $newUserId]);
+                $userVentureId = (int)$pdo->lastInsertId();
+
+                $insProj = $pdo->prepare("
+                    INSERT INTO projects (venture_id, name, description, color, icon, status, user_id) 
+                    VALUES (:vid, 'General Operations', 'Primary workspace roadmap and execution deliverables', 'indigo', 'folder-kanban', 'active', :uid)
+                ");
+                $insProj->execute([':vid' => $userVentureId, ':uid' => $newUserId]);
+            }
+
+            $user = getUserById($newUserId);
+        } catch (\Throwable $e) {
+            error_log("Failed to create Google user: " . $e->getMessage());
+            return ['success' => false, 'error' => 'Database error while creating user profile: ' . $e->getMessage()];
+        }
+    } else {
+        // If user already existed, update avatar if empty
+        if ((empty($user['avatar_url']) || strpos($user['avatar_url'], 'ui-avatars.com') !== false) && !empty($avatar)) {
+            $stmt = $pdo->prepare("UPDATE users SET avatar_url = :avatar WHERE id = :id");
+            $stmt->execute([':avatar' => $avatar, ':id' => (int)$user['id']]);
+            $user['avatar_url'] = $avatar;
+        }
+    }
+
+    // Log the user in
+    loginUser($user, true);
+
+    $cleanUser = getUserById($user['id']);
+    unset($cleanUser['password_hash']);
+
+    return [
+        'success' => true,
+        'message' => 'Signed in with Google successfully! Welcome, ' . htmlspecialchars($cleanUser['name']) . '.',
+        'user' => $cleanUser
+    ];
+}

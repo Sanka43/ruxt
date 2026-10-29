@@ -4280,6 +4280,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     openaiKeyInput.placeholder = `Configured (${state.settings.masked_openai_key})`;
                 }
 
+                // Google OAuth Sign-In Status
+                const googleClientIdInput = document.getElementById('googleClientIdInput');
+                const googleAuthStatusBadge = document.getElementById('googleAuthStatusBadge');
+                if (googleClientIdInput) {
+                    googleClientIdInput.value = state.settings.google_client_id || '';
+                }
+                if (googleAuthStatusBadge) {
+                    if (state.settings.has_google_client_id) {
+                        googleAuthStatusBadge.className = 'text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-mono font-bold';
+                        googleAuthStatusBadge.textContent = 'Active & Ready';
+                    } else {
+                        googleAuthStatusBadge.className = 'text-[10px] bg-stone-100 text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full font-mono font-bold';
+                        googleAuthStatusBadge.textContent = 'Not Configured';
+                    }
+                }
+
                 if (sidebarCompanyName) {
                     sidebarCompanyName.textContent = state.settings.company_name || 'Enterprises';
                 }
@@ -4437,6 +4453,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (openaiKeyInput && openaiKeyInput.value.trim()) {
             payload.openai_api_key = openaiKeyInput.value.trim();
+        }
+        const googleClientIdInput = document.getElementById('googleClientIdInput');
+        if (googleClientIdInput) {
+            payload.google_client_id = googleClientIdInput.value.trim();
         }
 
         try {

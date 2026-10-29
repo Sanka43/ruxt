@@ -41,6 +41,9 @@ if ($method === 'GET') {
 
     $tokenStats = getTokenUsageStats();
     $userName = !empty($currentUser['name']) ? $currentUser['name'] : getSetting('user_name', 'CEO');
+    $googleClientId = getGoogleClientId();
+    $googleClientSecret = getGoogleClientSecret();
+    $maskedGoogleSecret = !empty($googleClientSecret) ? (strlen($googleClientSecret) > 6 ? substr($googleClientSecret, 0, 3) . '...' . substr($googleClientSecret, -3) : '***') : '';
 
     sendJsonResponse([
         'settings' => [
@@ -59,6 +62,10 @@ if ($method === 'GET') {
             'masked_openai_key' => $maskedOpenAIKey,
             'voice_input_lang' => getSetting('voice_input_lang', 'en-US'),
             'voice_auto_speak' => (getSetting('voice_auto_speak', '0') === '1'),
+            'google_client_id' => $googleClientId,
+            'has_google_client_id' => !empty($googleClientId),
+            'has_google_client_secret' => !empty($googleClientSecret),
+            'masked_google_client_secret' => $maskedGoogleSecret,
             'memories_count' => $memoriesCount,
             'token_usage' => $tokenStats
         ]
@@ -126,6 +133,16 @@ if ($method === 'POST') {
     }
     if (isset($input['voice_auto_speak'])) {
         setSetting('voice_auto_speak', $input['voice_auto_speak'] ? '1' : '0');
+    }
+    if (!empty($input['clear_google_client_id'])) {
+        setSetting('google_client_id', '');
+    } elseif (isset($input['google_client_id'])) {
+        setSetting('google_client_id', trim($input['google_client_id']));
+    }
+    if (!empty($input['clear_google_client_secret'])) {
+        setSetting('google_client_secret', '');
+    } elseif (isset($input['google_client_secret']) && trim($input['google_client_secret']) !== '') {
+        setSetting('google_client_secret', trim($input['google_client_secret']));
     }
 
     sendJsonResponse(['success' => true, 'message' => 'Settings updated successfully']);

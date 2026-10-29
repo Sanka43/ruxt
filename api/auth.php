@@ -64,6 +64,39 @@ if ($method === 'POST' && ($action === 'login' || empty($action) && isset($input
     }
 }
 
+// 3.5. GOOGLE SIGN IN
+if ($method === 'POST' && ($action === 'google_login' || $action === 'google')) {
+    $credential = $input['credential'] ?? $input['id_token'] ?? $_POST['credential'] ?? $_POST['id_token'] ?? '';
+
+    if (empty($credential)) {
+        sendJsonResponse([
+            'success' => false,
+            'error' => 'Missing Google credential token.'
+        ], 400);
+    }
+
+    $result = authenticateWithGoogle($credential);
+    if ($result['success']) {
+        $redirect = 'index.php';
+        if (!empty($_GET['redirect'])) {
+            $redirect = filter_var($_GET['redirect'], FILTER_SANITIZE_URL);
+        }
+        $needsOnboarding = empty($result['user']['onboarding_completed']) || intval($result['user']['onboarding_completed']) === 0;
+        sendJsonResponse([
+            'success' => true,
+            'message' => $result['message'],
+            'user' => $result['user'],
+            'needs_onboarding' => $needsOnboarding,
+            'redirect' => $redirect
+        ]);
+    } else {
+        sendJsonResponse([
+            'success' => false,
+            'error' => $result['error']
+        ], 400);
+    }
+}
+
 // 4. REGISTER
 if ($method === 'POST' && $action === 'register') {
     $name = $input['name'] ?? $_POST['name'] ?? '';

@@ -611,6 +611,23 @@ try {
         }
     }
 
+    // Auto-migration: Ensure google_id column exists on users table
+    $usersColumns = getDbTableColumns($pdo, 'users');
+    if (!empty($usersColumns) && !in_array('google_id', $usersColumns)) {
+        try {
+            $currentDriver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($currentDriver === 'sqlite') {
+                $pdo->exec("ALTER TABLE users ADD COLUMN google_id TEXT DEFAULT NULL");
+                $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)");
+            } else {
+                $pdo->exec("ALTER TABLE `users` ADD COLUMN `google_id` VARCHAR(191) NULL DEFAULT NULL AFTER `email`");
+                $pdo->exec("ALTER TABLE `users` ADD UNIQUE KEY `google_id` (`google_id`)");
+            }
+        } catch (\Throwable $e) {
+            error_log("Failed to add google_id column to users: " . $e->getMessage());
+        }
+    }
+
     // Seed default projects if empty
     $projCount = $pdo->query("SELECT COUNT(*) FROM `projects`")->fetchColumn();
     if ($projCount == 0) {
@@ -1725,6 +1742,41 @@ function resetUserOnboarding($userId) {
         return $stmt->execute([':id' => (int)$userId]);
     } catch (\Throwable $e) {
         error_log("resetUserOnboarding error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Fetch a user by their Google OAuth unique ID
+ */
+function getUserByGoogleId($googleId) {
+    global $pdo;
+    try {
+        if (empty($googleId)) return null;
+        $stmt = $pdo->prepare("SELECT * FROM `users` WHERE google_id = :gid LIMIT 1");
+        $stmt->execute([':gid' => (string)$googleId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (\Throwable $e) {
+        error_log("getUserByGoogleId error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Associate an existing user profile with their Google OAuth ID
+ */
+function linkUserGoogleId($userId, $googleId, $avatarUrl = null) {
+    global $pdo;
+    try {
+        if (!empty($avatarUrl)) {
+            $stmt = $pdo->prepare("UPDATE `users` SET google_id = :gid, avatar_url = CASE WHEN (avatar_url IS NULL OR avatar_url = '') THEN :avatar ELSE avatar_url END WHERE id = :id");
+            return $stmt->execute([':gid' => (string)$googleId, ':avatar' => $avatarUrl, ':id' => (int)$userId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE `users` SET google_id = :gid WHERE id = :id");
+            return $stmt->execute([':gid' => (string)$googleId, ':id' => (int)$userId]);
+        }
+    } catch (\Throwable $e) {
+        error_log("linkUserGoogleId error: " . $e->getMessage());
         return false;
     }
 }
