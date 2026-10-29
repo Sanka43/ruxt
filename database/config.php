@@ -7,7 +7,7 @@ if (!defined('DB_DRIVER')) {
 
 // MySQL Configuration
 if (!defined('DB_HOST')) {
-    define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 }
 
 if (!defined('DB_PORT')) {
