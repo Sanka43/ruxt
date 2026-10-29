@@ -44,7 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
         callRecognition: null,
         callCurrentExecutiveId: 1,
         isMeetingPlaying: false,
-        pendingAttachments: []
+        pendingAttachments: [],
+        storeTemplates: [],
+        selectedStoreTemplate: null,
+        activeStoreFilter: 'all',
+        pendingCelebrationVentureId: null
     };
 
     if (state.synth) {
@@ -108,6 +112,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeVentureModalBtn = document.getElementById('closeVentureModalBtn');
     const ventureForm = document.getElementById('ventureForm');
     const hireVentureSelect = document.getElementById('hireVentureSelect');
+
+    // Workspace Marketplace & Predefined Store Elements
+    const openWorkspaceStoreBtn = document.getElementById('openWorkspaceStoreBtn');
+    const btnOpenStoreDropdown = document.getElementById('btnOpenStoreDropdown');
+    const headerStoreBtn = document.getElementById('headerStoreBtn');
+    const workspaceStoreModal = document.getElementById('workspaceStoreModal');
+    const closeWorkspaceStoreBtn = document.getElementById('closeWorkspaceStoreBtn');
+    const storeSearchInput = document.getElementById('storeSearchInput');
+    const workspaceStoreGrid = document.getElementById('workspaceStoreGrid');
+    const workspaceStoreLoading = document.getElementById('workspaceStoreLoading');
+    const workspaceStoreEmpty = document.getElementById('workspaceStoreEmpty');
+    const workspacePreviewModal = document.getElementById('workspacePreviewModal');
+    const closePreviewModalBtn = document.getElementById('closePreviewModalBtn');
+    const previewBackBtn = document.getElementById('previewBackBtn');
+    const previewPrimaryActionBtn = document.getElementById('previewPrimaryActionBtn');
+    const previewPrimaryActionText = document.getElementById('previewPrimaryActionText');
+    const workspaceCheckoutModal = document.getElementById('workspaceCheckoutModal');
+    const closeCheckoutModalBtn = document.getElementById('closeCheckoutModalBtn');
+    const submitSandboxPayBtn = document.getElementById('submitSandboxPayBtn');
+    const sandboxPayBtnText = document.getElementById('sandboxPayBtnText');
+    const checkoutPromoInput = document.getElementById('checkoutPromoInput');
+    const applyPromoBtn = document.getElementById('applyPromoBtn');
+    const workspaceCelebrationModal = document.getElementById('workspaceCelebrationModal');
+    const celebrationSwitchNowBtn = document.getElementById('celebrationSwitchNowBtn');
+    const celebrationStayBtn = document.getElementById('celebrationStayBtn');
 
     // Sidebar & Drawer
     const sidebar = document.getElementById('sidebar');
@@ -1446,8 +1475,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         state.currentSessionId = null;
                         setEmptyChatView();
                     }
-                    // Auto-trigger onboarding if there are no existing sessions
-                    checkAndTriggerOnboarding();
+                    // Auto-trigger onboarding only if user hasn't completed or skipped it
+                    if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
+                        checkAndTriggerOnboarding(true);
+                    }
                 }
             }
         } catch (err) {
@@ -1566,10 +1597,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await fetch(`api/sessions.php?id=${sessionId}`, { method: 'DELETE' });
             state.sessions = state.sessions.filter(s => s.id != sessionId);
-            if (state.currentSessionId == sessionId) {
-                state.currentSessionId = state.sessions.length > 0 ? state.sessions[0].id : null;
-                if (state.currentSessionId) selectSession(state.currentSessionId);
-                else setEmptyChatView();
+            if (state.sessions.length === 0) {
+                state.currentSessionId = null;
+                setEmptyChatView();
+                // When all consultations are deleted, trigger onboarding only if pending
+                if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
+                    await checkAndTriggerOnboarding(true);
+                }
+            } else if (state.currentSessionId == sessionId) {
+                state.currentSessionId = state.sessions[0].id;
+                await selectSession(state.currentSessionId);
             }
             renderSessions();
         } catch (err) {
@@ -1800,13 +1837,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderTokenUsage(data.token_stats);
                 }
 
-                // Handle Open Workspace Modal instruction
-                if (data.open_workspace_modal) {
+                // Check if current session is onboarding/welcome consultation
+                const curSession = state.sessions.find(s => s.id == state.currentSessionId);
+                const isWelcomeSess = curSession && (
+                    (curSession.title && (curSession.title.includes('Welcome') || curSession.title.includes('Role Setup'))) ||
+                    curSession.project_name === 'Onboarding'
+                );
+
+                // Handle Open Workspace Modal instruction (suppressed in welcome chat)
+                if (data.open_workspace_modal && !isWelcomeSess) {
                     openVentureModal();
                 }
 
+                // Handle Open Predefined Workspace Store instruction
+                if (data.open_workspace_store && !isWelcomeSess) {
+                    openWorkspaceStore('all');
+                }
+
+                const passedWorkspace = isWelcomeSess ? null : data.created_workspace;
+                const passedPromptCard = isWelcomeSess ? null : data.workspace_prompt_card;
+
                 // Append the response with live workspace & prompt cards & work preview & system actions & role configuration
-                appendMessage('model', data.reply, true, discId, detectedProj, data.delegated_tasks, data.created_workspace, data.workspace_prompt_card, data.work_preview, data.actions, data.role_configured);
+                appendMessage('model', data.reply, true, discId, detectedProj, data.delegated_tasks, passedWorkspace, passedPromptCard, data.work_preview, data.actions, data.role_configured);
 
                 if (data.role_configured) {
                     showToastNotification(`✨ RuXt role activated: ${data.role_configured.role_title}`);
@@ -1856,13 +1908,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let safeRawContent = content || '';
         let quickFields = [];
-        const quickMatch = safeRawContent.match(/\[\[QUICK_FIELDS:\s*(\[.*?\])\s*\]\]/s);
+        const quickMatch = safeRawContent.match(/\[\[QUICK_FIELDS:\s*(\[[\s\S]*?\])\s*\]\]/);
         if (quickMatch) {
             try {
                 quickFields = JSON.parse(quickMatch[1]);
             } catch (e) {}
-            safeRawContent = safeRawContent.replace(/\[\[QUICK_FIELDS:.*?\]\]/s, '').trim();
+            safeRawContent = safeRawContent.replace(/\[\[QUICK_FIELDS:\s*\[[\s\S]*?\]\s*\]\]/g, '').trim();
         }
+        // Cleanup any stray trailing bracket from older message parsing
+        safeRawContent = safeRawContent.replace(/\n\s*\]\s*$/g, '').trim();
 
         const parsedContent = isUser 
             ? escapeHtml(safeRawContent) 
@@ -2175,20 +2229,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let quickFieldsHtml = '';
         if (!isUser && quickFields && Array.isArray(quickFields) && quickFields.length > 0) {
+            const qfUid = 'qf_' + Math.random().toString(36).substring(2, 9);
+            const hasOther = quickFields.some(f => /other|custom|තවත්|වෙනත්/i.test(f));
+            const needsOnboarding = !state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0;
+
             quickFieldsHtml = `
                 <div class="mt-3.5 pt-3 border-t border-[#ddd8cc]/70">
                     <div class="text-[10px] font-bold text-[#173d34] mb-2 flex items-center space-x-1.5 font-mono uppercase tracking-wider">
                         <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
-                        <span>Select Your Domain / Quick Reply:</span>
+                        <span>Select A Free Workspace / Quick Reply:</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        ${quickFields.map(f => `
-                            <button type="button" onclick="window.sendPrompt('${escapeHtml(f)}')" class="p-2.5 rounded-xl bg-[#ffffff] hover:bg-[#173d34] text-[#202725] hover:text-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] transition-all text-xs font-bold text-left flex items-center justify-between shadow-2xs group cursor-pointer active:scale-[0.98]">
-                                <span class="truncate">${escapeHtml(f)}</span>
-                                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-[#68716d] group-hover:text-[#fcfaf5] transition-colors flex-shrink-0 ml-1"></i>
-                            </button>
-                        `).join('')}
+                        ${quickFields.map(f => {
+                            const isOther = /other|custom|තවත්|වෙනත්/i.test(f);
+                            if (isOther) {
+                                return `
+                                    <button type="button" onclick="window.toggleQuickOtherInput('${qfUid}')" class="p-2.5 rounded-xl bg-[#ffffff] hover:bg-[#173d34] text-[#202725] hover:text-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] transition-all text-xs font-bold text-left flex items-center justify-between shadow-2xs group cursor-pointer active:scale-[0.98]">
+                                        <span class="truncate flex items-center gap-1.5">
+                                            <i data-lucide="pen-tool" class="w-3.5 h-3.5 text-amber-500 group-hover:text-amber-300"></i>
+                                            <span>${escapeHtml(f)}</span>
+                                        </span>
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5 text-[#68716d] group-hover:text-[#fcfaf5] transition-colors flex-shrink-0 ml-1"></i>
+                                    </button>
+                                `;
+                            }
+                            return `
+                                <button type="button" onclick="window.sendPrompt('${escapeHtml(f)}')" class="p-2.5 rounded-xl bg-[#ffffff] hover:bg-[#173d34] text-[#202725] hover:text-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] transition-all text-xs font-bold text-left flex items-center justify-between shadow-2xs group cursor-pointer active:scale-[0.98]">
+                                    <span class="truncate">${escapeHtml(f)}</span>
+                                    <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-[#68716d] group-hover:text-[#fcfaf5] transition-colors flex-shrink-0 ml-1"></i>
+                                </button>
+                            `;
+                        }).join('')}
                     </div>
+
+                    <!-- Custom / Other Input Container -->
+                    <div id="${qfUid}_other_box" class="hidden mt-3 p-3 rounded-2xl bg-[#ffffff] border-2 border-[#173d34]/25 shadow-md transition-all animate-fade-in">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-[11px] font-bold text-[#173d34] flex items-center gap-1.5 font-mono uppercase tracking-wider">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-500"></i>
+                                <span>Specify Your Custom Workspace or Domain:</span>
+                            </label>
+                            <button type="button" onclick="window.toggleQuickOtherInput('${qfUid}', false)" class="text-[11px] text-[#68716d] hover:text-[#202725] px-2 py-0.5 rounded-lg hover:bg-[#ede8dc] transition-colors cursor-pointer font-semibold">✕ Close</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="${qfUid}_input" placeholder="e.g. Graphic Designer, Medical Research, 3D Artist, Student, Real Estate..." class="flex-1 bg-[#fcfaf5] border border-[#ddd8cc] focus:border-[#173d34] text-[#202725] text-xs rounded-xl px-3.5 py-2.5 outline-none shadow-inner" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.submitQuickOtherInput('${qfUid}');}">
+                            <button type="button" onclick="window.submitQuickOtherInput('${qfUid}')" class="px-4 py-2.5 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm active:scale-95 cursor-pointer flex-shrink-0">
+                                <span>Submit</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div class="text-[10px] text-[#68716d] mt-2 font-medium flex items-center gap-1">
+                            <i data-lucide="info" class="w-3 h-3 text-amber-500"></i>
+                            <span>RuXt will configure its specialized role to match what you enter.</span>
+                        </div>
+                    </div>
+
+                    ${(hasOther || needsOnboarding) ? `
+                        <!-- Skip / Continue Directly Bar -->
+                        <div class="mt-3 pt-2.5 border-t border-[#ddd8cc]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div class="text-[11px] text-[#68716d] flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0"></i>
+                                <span>Prefer to skip setup and start chatting right away?</span>
+                            </div>
+                            <button type="button" onclick="window.skipOnboarding()" class="px-3.5 py-1.5 rounded-xl bg-[#ffffff] hover:bg-[#ede8dc] text-[#173d34] border border-[#ddd8cc] hover:border-[#173d34]/40 font-bold transition-all flex items-center justify-center space-x-1.5 shadow-2xs active:scale-95 cursor-pointer flex-shrink-0">
+                                <span>Skip & Continue</span>
+                                <i data-lucide="chevrons-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -2549,10 +2657,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (settingsMemBadge) settingsMemBadge.textContent = '0 memories';
                 renderMemories();
                 closeConfirmClearMemories();
+
+                // Reset user onboarding state in client
+                if (state.user) {
+                    state.user.onboarding_completed = 0;
+                    state.user.job_field = null;
+                    state.user.specialized_role = null;
+                }
+                const pField = document.getElementById('profileUserJobField');
+                if (pField) pField.textContent = 'Pending Onboarding';
+                const pRole = document.getElementById('profileRuxtSpecializedRole');
+                if (pRole) pRole.textContent = 'Chief of Staff & Lead Assistant';
+
+                // Automatically trigger the welcome onboarding consultation
+                await checkAndTriggerOnboarding(true);
+
                 if (typeof showToastNotification === 'function') {
-                    showToastNotification('All CEO memories have been permanently cleared from RuXt vault.');
+                    showToastNotification('All memories cleared. RuXt welcome consultation initiated.');
                 } else {
-                    alert('All CEO memories cleared successfully!');
+                    alert('All memories cleared. RuXt welcome consultation initiated.');
                 }
             } else {
                 alert('Failed to clear memories: ' + (data.error || 'Unknown error'));
@@ -4768,7 +4891,498 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.addEventListener('mouseleave', () => { dismissTimer = setTimeout(dismiss, 2500); });
     }
 
+    // ============================================
+    // Predefined Workspaces & Monetization Flow
+    // ============================================
+    async function loadStoreTemplates() {
+        if (workspaceStoreLoading) workspaceStoreLoading.classList.remove('hidden');
+        if (workspaceStoreGrid) workspaceStoreGrid.classList.add('hidden');
+        if (workspaceStoreEmpty) workspaceStoreEmpty.classList.add('hidden');
+
+        try {
+            const res = await fetch('api/workspace_store.php');
+            const data = await res.json();
+            if (data.templates) {
+                state.storeTemplates = data.templates;
+                renderStoreCards();
+            }
+        } catch (err) {
+            console.error('Failed to load workspace store templates:', err);
+            showToastNotification('Failed to load templates from server', 'error');
+        } finally {
+            if (workspaceStoreLoading) workspaceStoreLoading.classList.add('hidden');
+        }
+    }
+
+    function openWorkspaceStore(filter = 'all') {
+        closeVentureDropdown();
+        closeMobileSidebar();
+        state.activeStoreFilter = filter;
+
+        // Update filter button active states
+        document.querySelectorAll('.store-filter-btn').forEach(btn => {
+            const isMatch = btn.dataset.filter === filter;
+            if (isMatch) {
+                btn.className = 'store-filter-btn px-3 py-1 rounded-full font-bold transition-all bg-[#173d34] text-[#fcfaf5] shadow-sm';
+            } else {
+                btn.className = 'store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]';
+            }
+        });
+
+        if (storeSearchInput) storeSearchInput.value = '';
+        if (workspaceStoreModal) workspaceStoreModal.classList.remove('hidden');
+
+        loadStoreTemplates();
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeWorkspaceStore() {
+        if (workspaceStoreModal) workspaceStoreModal.classList.add('hidden');
+    }
+
+    function renderStoreCards() {
+        if (!workspaceStoreGrid) return;
+        workspaceStoreGrid.innerHTML = '';
+
+        const filter = state.activeStoreFilter || 'all';
+        const search = (storeSearchInput ? storeSearchInput.value.trim().toLowerCase() : '');
+
+        const filtered = state.storeTemplates.filter(t => {
+            // Category filter
+            if (filter === 'free' && t.tier !== 'free') return false;
+            if (filter === 'paid' && t.tier !== 'paid') return false;
+            if (filter === 'content' && !t.domain.toLowerCase().includes('content') && !t.domain.toLowerCase().includes('media')) return false;
+            if (filter === 'ecommerce' && !t.domain.toLowerCase().includes('commerce') && !t.domain.toLowerCase().includes('retail')) return false;
+            if (filter === 'tech' && !t.domain.toLowerCase().includes('software') && !t.domain.toLowerCase().includes('saas')) return false;
+            if (filter === 'business' && !t.domain.toLowerCase().includes('freelance') && !t.domain.toLowerCase().includes('real estate') && !t.domain.toLowerCase().includes('consulting')) return false;
+
+            // Search filter
+            if (search) {
+                const combined = (t.title + ' ' + t.domain + ' ' + t.description + ' ' + (t.badge || '')).toLowerCase();
+                if (!combined.includes(search)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            workspaceStoreGrid.classList.add('hidden');
+            if (workspaceStoreEmpty) workspaceStoreEmpty.classList.remove('hidden');
+            return;
+        }
+
+        if (workspaceStoreEmpty) workspaceStoreEmpty.classList.add('hidden');
+        workspaceStoreGrid.classList.remove('hidden');
+
+        filtered.forEach(tpl => {
+            const isFree = tpl.tier === 'free';
+            const price = parseFloat(tpl.price) || 0;
+            const priceLabel = isFree ? 'FREE' : `$${price.toFixed(2)} USD`;
+            const badgeText = tpl.badge || (isFree ? 'STARTER' : 'PRO SUITE');
+            const isDeployed = tpl.is_deployed;
+            const isUnlocked = tpl.is_unlocked;
+
+            const card = document.createElement('div');
+            card.className = 'bg-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34]/40 rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 hover:shadow-lg group';
+
+            const execCount = tpl.executives ? tpl.executives.length : 0;
+            const execAvatars = (tpl.executives || []).slice(0, 4).map((ex, idx) => `
+                <img src="${escapeHtml(ex.avatar_url || '')}" alt="${escapeHtml(ex.name)}" title="${escapeHtml(ex.name)} (${escapeHtml(ex.title)})" class="w-6 h-6 rounded-full border-2 border-[#ffffff] object-cover -ml-1.5 first:ml-0 shadow-sm" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'">
+            `).join('');
+
+            const featuresList = (tpl.features || []).slice(0, 3).map(f => `
+                <div class="flex items-start space-x-1.5 text-[11px] text-[#3d4942]">
+                    <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5"></i>
+                    <span class="truncate">${escapeHtml(f)}</span>
+                </div>
+            `).join('');
+
+            let primaryBtnHtml = '';
+            if (isFree) {
+                primaryBtnHtml = `
+                    <button type="button" class="btn-deploy-template flex-1 py-2 px-3 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center space-x-1.5" data-slug="${escapeHtml(tpl.slug)}">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <span>Deploy Free</span>
+                    </button>
+                `;
+            } else if (isUnlocked) {
+                primaryBtnHtml = `
+                    <button type="button" class="btn-deploy-template flex-1 py-2 px-3 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center space-x-1.5" data-slug="${escapeHtml(tpl.slug)}">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>Deploy Unlocked</span>
+                    </button>
+                `;
+            } else {
+                primaryBtnHtml = `
+                    <button type="button" class="btn-buy-template flex-1 py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-[#ffffff] rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-600/20 flex items-center justify-center space-x-1.5" data-slug="${escapeHtml(tpl.slug)}">
+                        <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
+                        <span>Unlock Pro ($${price.toFixed(0)})</span>
+                    </button>
+                `;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <!-- Header Pill & Badge -->
+                    <div class="flex items-center justify-between mb-2.5">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-xl bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <i data-lucide="${escapeHtml(tpl.icon || 'briefcase')}" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <span class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold ${isFree ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'}">${escapeHtml(badgeText)}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold ${isFree ? 'text-emerald-700' : 'text-[#173d34]'}">${priceLabel}</span>
+                        </div>
+                    </div>
+
+                    <!-- Title & Domain -->
+                    <h4 class="font-bold text-[#202725] text-xs sm:text-sm group-hover:text-[#173d34] transition-colors leading-snug mb-0.5">${escapeHtml(tpl.title)}</h4>
+                    <div class="text-[10px] text-[#68716d] font-mono mb-2">${escapeHtml(tpl.domain)}</div>
+
+                    <!-- Description -->
+                    <p class="text-[11px] text-[#3d4942] leading-relaxed line-clamp-2 mb-3">${escapeHtml(tpl.description)}</p>
+
+                    <!-- Features -->
+                    <div class="space-y-1 mb-3 bg-[#ffffff] p-2.5 rounded-xl border border-[#ddd8cc]/60">
+                        ${featuresList}
+                    </div>
+
+                    <!-- Executive Team Avatars -->
+                    <div class="flex items-center justify-between pt-2 border-t border-[#ddd8cc]/60 mb-3.5">
+                        <div class="flex items-center">
+                            ${execAvatars}
+                        </div>
+                        <span class="text-[10px] font-mono text-[#68716d] font-semibold">${execCount} AI Specialists</span>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="space-y-1.5 pt-1">
+                    ${isDeployed ? `<div class="text-center text-[10px] text-emerald-700 font-semibold flex items-center justify-center gap-1 mb-1"><i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i> Already In Your Workspaces</div>` : ''}
+                    <div class="flex items-center space-x-1.5">
+                        <button type="button" class="btn-preview-template px-3 py-2 bg-[#ffffff] hover:bg-[#f5f2e9] text-[#202725] rounded-xl text-xs font-semibold border border-[#ddd8cc] transition-colors flex items-center justify-center" data-slug="${escapeHtml(tpl.slug)}" title="Inspect Team, Roadmaps & SOPs">
+                            <span>Preview</span>
+                        </button>
+                        ${primaryBtnHtml}
+                    </div>
+                </div>
+            `;
+
+            workspaceStoreGrid.appendChild(card);
+        });
+
+        // Attach action handlers to buttons
+        workspaceStoreGrid.querySelectorAll('.btn-preview-template').forEach(b => {
+            b.addEventListener('click', () => previewStoreTemplate(b.dataset.slug));
+        });
+
+        workspaceStoreGrid.querySelectorAll('.btn-deploy-template').forEach(b => {
+            b.addEventListener('click', () => {
+                const tpl = state.storeTemplates.find(t => t.slug === b.dataset.slug);
+                if (tpl) deployFreeTemplate(tpl, b);
+            });
+        });
+
+        workspaceStoreGrid.querySelectorAll('.btn-buy-template').forEach(b => {
+            b.addEventListener('click', () => {
+                const tpl = state.storeTemplates.find(t => t.slug === b.dataset.slug);
+                if (tpl) openCheckoutModal(tpl);
+            });
+        });
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function previewStoreTemplate(slug) {
+        const tpl = state.storeTemplates.find(t => t.slug === slug);
+        if (!tpl) return;
+
+        state.selectedStoreTemplate = tpl;
+
+        // Populate Preview Header
+        const previewIcon = document.getElementById('previewIcon');
+        if (previewIcon) previewIcon.setAttribute('data-lucide', tpl.icon || 'briefcase');
+
+        const previewTitle = document.getElementById('previewTitle');
+        if (previewTitle) previewTitle.textContent = tpl.title;
+
+        const previewDomain = document.getElementById('previewDomain');
+        if (previewDomain) previewDomain.textContent = tpl.domain;
+
+        const previewBadge = document.getElementById('previewBadge');
+        if (previewBadge) previewBadge.textContent = tpl.badge || (tpl.tier === 'free' ? 'STARTER' : 'PRO');
+
+        const previewPriceBadge = document.getElementById('previewPriceBadge');
+        if (previewPriceBadge) {
+            previewPriceBadge.textContent = tpl.tier === 'free' ? 'FREE' : `$${parseFloat(tpl.price).toFixed(2)} USD`;
+        }
+
+        const previewDescription = document.getElementById('previewDescription');
+        if (previewDescription) previewDescription.textContent = tpl.description;
+
+        // Features
+        const previewFeaturesList = document.getElementById('previewFeaturesList');
+        if (previewFeaturesList) {
+            previewFeaturesList.innerHTML = (tpl.features || []).map(f => `
+                <div class="flex items-center space-x-2 p-2 bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl text-xs text-[#202725]">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+                    <span class="font-medium">${escapeHtml(f)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Executives Roster
+        const previewExecutivesList = document.getElementById('previewExecutivesList');
+        const previewTeamCountBadge = document.getElementById('previewTeamCountBadge');
+        if (previewTeamCountBadge) previewTeamCountBadge.textContent = `${(tpl.executives || []).length} AI Specialists`;
+
+        if (previewExecutivesList) {
+            previewExecutivesList.innerHTML = (tpl.executives || []).map(ex => `
+                <div class="p-3 bg-[#fcfaf5] border border-[#ddd8cc] rounded-2xl flex items-start space-x-3">
+                    <img src="${escapeHtml(ex.avatar_url)}" alt="${escapeHtml(ex.name)}" class="w-10 h-10 rounded-2xl object-cover border border-[#ddd8cc] flex-shrink-0 shadow-sm" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between">
+                            <h5 class="text-xs font-bold text-[#202725] truncate">${escapeHtml(ex.name)}</h5>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20">${escapeHtml(ex.voice_id || 'nova')}</span>
+                        </div>
+                        <div class="text-[10px] text-[#173d34] font-semibold truncate mb-1">${escapeHtml(ex.title)}</div>
+                        <p class="text-[10px] text-[#68716d] leading-relaxed line-clamp-2">${escapeHtml(ex.bio)}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Roadmaps / Projects
+        const previewProjectsList = document.getElementById('previewProjectsList');
+        if (previewProjectsList) {
+            previewProjectsList.innerHTML = (tpl.projects || []).map(pr => `
+                <div class="p-2.5 bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl flex items-center space-x-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-700 flex items-center justify-center flex-shrink-0 border border-indigo-500/20">
+                        <i data-lucide="${escapeHtml(pr.icon || 'folder-kanban')}" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs font-bold text-[#202725]">${escapeHtml(pr.name)}</div>
+                        <div class="text-[10px] text-[#68716d] truncate">${escapeHtml(pr.description)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Tasks / SOPs
+        const previewTasksList = document.getElementById('previewTasksList');
+        if (previewTasksList) {
+            previewTasksList.innerHTML = (tpl.tasks || []).map(tsk => `
+                <div class="p-2 bg-[#ffffff] border border-[#ddd8cc] rounded-xl flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+                        <i data-lucide="check-square" class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0"></i>
+                        <span class="font-medium text-[#202725] truncate">${escapeHtml(tsk.title)}</span>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-mono bg-[#f5f2e9] text-[#68716d] border border-[#ddd8cc] flex-shrink-0">
+                        ${escapeHtml(tsk.assigned_to || 'Assigned')}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Primary Action Button
+        if (previewPrimaryActionText && previewPrimaryActionBtn) {
+            if (tpl.tier === 'free' || tpl.is_unlocked) {
+                previewPrimaryActionText.textContent = 'Deploy Free Workspace Now';
+                previewPrimaryActionBtn.onclick = () => deployFreeTemplate(tpl, previewPrimaryActionBtn);
+            } else {
+                previewPrimaryActionText.textContent = `Unlock Pro Workspace ($${parseFloat(tpl.price).toFixed(0)} USD)`;
+                previewPrimaryActionBtn.onclick = () => {
+                    closePreviewModal();
+                    openCheckoutModal(tpl);
+                };
+            }
+        }
+
+        if (workspacePreviewModal) workspacePreviewModal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closePreviewModal() {
+        if (workspacePreviewModal) workspacePreviewModal.classList.add('hidden');
+    }
+
+    async function deployFreeTemplate(template, triggerBtn = null) {
+        if (!template) return;
+
+        let originalContent = '';
+        if (triggerBtn) {
+            originalContent = triggerBtn.innerHTML;
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = `
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>Deploying Blueprint...</span>
+            `;
+        }
+
+        try {
+            const res = await fetch('api/workspace_store.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'deploy_free',
+                    slug: template.slug
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.venture) {
+                closePreviewModal();
+                closeWorkspaceStore();
+                await loadVentures();
+                showCelebrationModal(data.venture);
+            } else {
+                alert(data.error || 'Failed to deploy workspace');
+            }
+        } catch (err) {
+            console.error('Error deploying free template:', err);
+            alert('Error deploying workspace. Please try again.');
+        } finally {
+            if (triggerBtn) {
+                triggerBtn.disabled = false;
+                triggerBtn.innerHTML = originalContent;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    }
+
+    function openCheckoutModal(template) {
+        if (!template) return;
+        state.selectedStoreTemplate = template;
+
+        const checkoutTemplateTitle = document.getElementById('checkoutTemplateTitle');
+        if (checkoutTemplateTitle) checkoutTemplateTitle.textContent = template.title;
+
+        const checkoutTemplateDomain = document.getElementById('checkoutTemplateDomain');
+        if (checkoutTemplateDomain) checkoutTemplateDomain.textContent = template.domain;
+
+        const checkoutPriceText = document.getElementById('checkoutPriceText');
+        const price = parseFloat(template.price) || 0;
+        if (checkoutPriceText) checkoutPriceText.textContent = `$${price.toFixed(2)} USD`;
+
+        if (checkoutPromoInput) checkoutPromoInput.value = '';
+        if (workspaceCheckoutModal) workspaceCheckoutModal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeCheckoutModal() {
+        if (workspaceCheckoutModal) workspaceCheckoutModal.classList.add('hidden');
+    }
+
+    async function processSandboxCheckout() {
+        if (!state.selectedStoreTemplate) return;
+
+        const tpl = state.selectedStoreTemplate;
+        if (submitSandboxPayBtn) {
+            submitSandboxPayBtn.disabled = true;
+            if (sandboxPayBtnText) sandboxPayBtnText.textContent = 'Simulating Card Authorization...';
+        }
+
+        try {
+            const res = await fetch('api/workspace_store.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'dummy_checkout',
+                    slug: tpl.slug,
+                    card_last4: '4242'
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.venture) {
+                closeCheckoutModal();
+                closePreviewModal();
+                closeWorkspaceStore();
+                await loadVentures();
+                showCelebrationModal(data.venture);
+            } else {
+                alert(data.error || 'Test payment failed');
+            }
+        } catch (err) {
+            console.error('Error processing sandbox checkout:', err);
+            alert('Error during simulated payment.');
+        } finally {
+            if (submitSandboxPayBtn) {
+                submitSandboxPayBtn.disabled = false;
+                if (sandboxPayBtnText) sandboxPayBtnText.textContent = 'Simulate Successful Test Payment';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    }
+
+    async function redeemStorePromoCode() {
+        if (!state.selectedStoreTemplate) return;
+        const code = (checkoutPromoInput ? checkoutPromoInput.value.trim().toUpperCase() : '');
+        if (!code) {
+            alert('Please enter a VIP or Promo code.');
+            return;
+        }
+
+        if (applyPromoBtn) {
+            applyPromoBtn.disabled = true;
+            applyPromoBtn.textContent = 'Validating...';
+        }
+
+        try {
+            const res = await fetch('api/workspace_store.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'redeem_promo',
+                    slug: state.selectedStoreTemplate.slug,
+                    promo_code: code
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.venture) {
+                closeCheckoutModal();
+                closePreviewModal();
+                closeWorkspaceStore();
+                await loadVentures();
+                showCelebrationModal(data.venture);
+            } else {
+                alert(data.error || 'Invalid promo code');
+            }
+        } catch (err) {
+            console.error('Error redeeming code:', err);
+            alert('Failed to validate code.');
+        } finally {
+            if (applyPromoBtn) {
+                applyPromoBtn.disabled = false;
+                applyPromoBtn.innerHTML = `<i data-lucide="tag" class="w-3.5 h-3.5"></i><span>Apply</span>`;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    }
+
+    function showCelebrationModal(venture) {
+        state.pendingCelebrationVentureId = venture.id;
+
+        const celebrationTitle = document.getElementById('celebrationTitle');
+        if (celebrationTitle) celebrationTitle.textContent = `🚀 "${venture.name}" Ready!`;
+
+        const celebrationDesc = document.getElementById('celebrationDesc');
+        if (celebrationDesc) {
+            celebrationDesc.textContent = `Your workspace has been provisioned with its specialized AI executive team and starter deliverables. You can switch to it now or continue in your Primary Workspace.`;
+        }
+
+        if (workspaceCelebrationModal) workspaceCelebrationModal.classList.remove('hidden');
+        showToastNotification(`🎉 Workspace "${venture.name}" is now ready!`, 'success');
+        if (window.lucide) lucide.createIcons();
+    }
+
     // Window Exports
+    window.openWorkspaceStore = openWorkspaceStore;
+    window.closeWorkspaceStore = closeWorkspaceStore;
+    window.previewStoreTemplate = previewStoreTemplate;
     window.startNewChat = startNewChat;
     window.createNewSession = startNewChat;
     window.showToastNotification = showToastNotification;
@@ -4855,6 +5469,61 @@ document.addEventListener('DOMContentLoaded', () => {
     window.sendPrompt = (prompt) => {
         chatInput.value = prompt;
         sendMessage();
+    };
+    window.toggleQuickOtherInput = (uid, forceOpen = null) => {
+        const box = document.getElementById(`${uid}_other_box`);
+        if (!box) return;
+        const shouldOpen = forceOpen !== null ? forceOpen : box.classList.contains('hidden');
+        if (shouldOpen) {
+            box.classList.remove('hidden');
+            const inp = document.getElementById(`${uid}_input`);
+            if (inp) {
+                inp.focus();
+            }
+            if (chatInput) {
+                chatInput.placeholder = "Enter your custom domain / role, or ask any question...";
+            }
+            if (window.lucide) lucide.createIcons();
+        } else {
+            box.classList.add('hidden');
+        }
+    };
+    window.submitQuickOtherInput = (uid) => {
+        const inp = document.getElementById(`${uid}_input`);
+        if (!inp) return;
+        const val = inp.value.trim();
+        if (!val) {
+            inp.focus();
+            inp.classList.add('border-rose-400');
+            setTimeout(() => inp.classList.remove('border-rose-400'), 1500);
+            return;
+        }
+        window.sendPrompt(`My field and focus is: ${val}`);
+    };
+    window.skipOnboarding = async () => {
+        try {
+            showToastNotification('Skipping role setup... Initializing Chief of Staff.');
+            await fetch('api/onboarding.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'skip' })
+            });
+            if (state.user) {
+                state.user.onboarding_completed = 1;
+                state.user.job_field = 'General Operations';
+                state.user.specialized_role = 'Chief of Staff & Lead Private Assistant';
+            }
+            const pField = document.getElementById('profileUserJobField');
+            if (pField) pField.textContent = 'General Operations';
+            const pRole = document.getElementById('profileRuxtSpecializedRole');
+            if (pRole) pRole.textContent = 'Chief of Staff & Lead Private Assistant';
+
+            // Seamlessly continue conversation directly!
+            window.sendPrompt("Let's skip the role setup for now. How can you assist me today?");
+        } catch (err) {
+            console.error('Failed to skip onboarding:', err);
+            window.sendPrompt("Let's skip the role setup for now and continue directly.");
+        }
     };
 
     // Event Listeners
@@ -4993,6 +5662,82 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAddNewVentureDropdown) btnAddNewVentureDropdown.addEventListener('click', openVentureModal);
     if (closeVentureModalBtn) closeVentureModalBtn.addEventListener('click', closeVentureModal);
     if (ventureForm) ventureForm.addEventListener('submit', handleCreateVenture);
+
+    // Workspace Marketplace & Predefined Blueprints Listeners
+    if (openWorkspaceStoreBtn) openWorkspaceStoreBtn.addEventListener('click', () => openWorkspaceStore('all'));
+    if (btnOpenStoreDropdown) btnOpenStoreDropdown.addEventListener('click', () => { closeVentureDropdown(); openWorkspaceStore('all'); });
+    if (headerStoreBtn) headerStoreBtn.addEventListener('click', () => openWorkspaceStore('all'));
+    if (closeWorkspaceStoreBtn) closeWorkspaceStoreBtn.addEventListener('click', closeWorkspaceStore);
+
+    if (storeSearchInput) {
+        storeSearchInput.addEventListener('input', () => renderStoreCards());
+    }
+
+    document.querySelectorAll('.store-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const f = btn.dataset.filter || 'all';
+            state.activeStoreFilter = f;
+            document.querySelectorAll('.store-filter-btn').forEach(b => {
+                const isMatch = b.dataset.filter === f;
+                b.className = isMatch 
+                    ? 'store-filter-btn px-3 py-1 rounded-full font-bold transition-all bg-[#173d34] text-[#fcfaf5] shadow-sm'
+                    : 'store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]';
+            });
+            renderStoreCards();
+        });
+    });
+
+    if (closePreviewModalBtn) closePreviewModalBtn.addEventListener('click', closePreviewModal);
+    if (previewBackBtn) previewBackBtn.addEventListener('click', closePreviewModal);
+
+    if (closeCheckoutModalBtn) closeCheckoutModalBtn.addEventListener('click', closeCheckoutModal);
+    if (submitSandboxPayBtn) submitSandboxPayBtn.addEventListener('click', processSandboxCheckout);
+    if (applyPromoBtn) applyPromoBtn.addEventListener('click', redeemStorePromoCode);
+    if (checkoutPromoInput) {
+        checkoutPromoInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') redeemStorePromoCode();
+        });
+    }
+
+    if (celebrationSwitchNowBtn) {
+        celebrationSwitchNowBtn.addEventListener('click', async () => {
+            if (workspaceCelebrationModal) workspaceCelebrationModal.classList.add('hidden');
+            if (state.pendingCelebrationVentureId) {
+                await switchVenture(state.pendingCelebrationVentureId);
+                state.pendingCelebrationVentureId = null;
+            }
+        });
+    }
+    if (celebrationStayBtn) {
+        celebrationStayBtn.addEventListener('click', () => {
+            if (workspaceCelebrationModal) workspaceCelebrationModal.classList.add('hidden');
+            state.pendingCelebrationVentureId = null;
+        });
+    }
+
+    if (workspaceStoreModal) {
+        workspaceStoreModal.addEventListener('click', (e) => {
+            if (e.target === workspaceStoreModal) closeWorkspaceStore();
+        });
+    }
+    if (workspacePreviewModal) {
+        workspacePreviewModal.addEventListener('click', (e) => {
+            if (e.target === workspacePreviewModal) closePreviewModal();
+        });
+    }
+    if (workspaceCheckoutModal) {
+        workspaceCheckoutModal.addEventListener('click', (e) => {
+            if (e.target === workspaceCheckoutModal) closeCheckoutModal();
+        });
+    }
+    if (workspaceCelebrationModal) {
+        workspaceCelebrationModal.addEventListener('click', (e) => {
+            if (e.target === workspaceCelebrationModal) {
+                workspaceCelebrationModal.classList.add('hidden');
+                state.pendingCelebrationVentureId = null;
+            }
+        });
+    }
 
     document.addEventListener('click', (e) => {
         if (ventureDropdownMenu && !ventureDropdownMenu.contains(e.target) && (!ventureDropdownBtn || !ventureDropdownBtn.contains(e.target)) && (!headerVenturePill || !headerVenturePill.contains(e.target))) {
@@ -5224,9 +5969,9 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadDiscussions();
             await loadNotes();
 
-            // Auto-trigger onboarding if user needs role configuration
+            // Auto-trigger onboarding only if user needs role configuration (not completed or skipped)
             if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
-                checkAndTriggerOnboarding();
+                checkAndTriggerOnboarding(false);
             }
         });
     });

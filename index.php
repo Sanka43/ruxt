@@ -112,9 +112,14 @@ $currentUser = getCurrentUser();
                     <span class="kicker flex items-center gap-1">
                         <i data-lucide="layers" class="w-3 h-3 text-[#173d34]"></i> Workspace
                     </span>
-                    <button id="openNewVentureBtn" type="button" class="text-[#173d34] hover:text-[#285c4e] text-[10px] font-bold flex items-center gap-0.5 bg-[#ffffff] hover:bg-[#fcfaf5] px-2 py-0.5 rounded-full border border-[#ddd8cc] transition-all shadow-sm">
-                        <i data-lucide="plus" class="w-2.5 h-2.5"></i> New
-                    </button>
+                    <div class="flex items-center space-x-1">
+                        <button id="openWorkspaceStoreBtn" type="button" class="text-amber-800 hover:text-amber-900 text-[10px] font-bold flex items-center gap-1 bg-amber-50 hover:bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
+                            <i data-lucide="sparkles" class="w-2.5 h-2.5 text-amber-600"></i> Store
+                        </button>
+                        <button id="openNewVentureBtn" type="button" class="text-[#173d34] hover:text-[#285c4e] text-[10px] font-bold flex items-center gap-0.5 bg-[#ffffff] hover:bg-[#fcfaf5] px-2 py-0.5 rounded-full border border-[#ddd8cc] transition-all shadow-sm" title="Create Custom Venture">
+                            <i data-lucide="plus" class="w-2.5 h-2.5"></i> New
+                        </button>
+                    </div>
                 </div>
                 
                 <button id="ventureDropdownBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl bg-[#ffffff] hover:bg-[#fffefa] border border-[#ddd8cc] hover:border-[#173d34]/40 text-left transition-all shadow-sm">
@@ -135,10 +140,17 @@ $currentUser = getCurrentUser();
                     <div id="ventureItemsList" class="max-h-52 overflow-y-auto space-y-1">
                         <!-- Populated dynamically -->
                     </div>
-                    <div class="pt-1.5 border-t border-[#e8e3d9]">
+                    <div class="pt-1.5 border-t border-[#e8e3d9] space-y-1">
+                        <button id="btnOpenStoreDropdown" type="button" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold text-[#173d34] bg-[#173d34]/5 hover:bg-[#173d34]/10 transition-colors">
+                            <span class="flex items-center space-x-2">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+                                <span>Browse Templates</span>
+                            </span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/20 text-amber-700">STORE</span>
+                        </button>
                         <button id="btnAddNewVentureDropdown" type="button" class="w-full flex items-center space-x-2 p-2 rounded-xl text-xs font-semibold text-[#173d34] hover:bg-[#f5f2e9] transition-colors">
                             <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                            <span>+ Launch New Venture</span>
+                            <span>+ Launch Custom Venture</span>
                         </button>
                     </div>
                 </div>
@@ -334,6 +346,13 @@ $currentUser = getCurrentUser();
                 <button id="headerProjectPill" type="button" class="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Project">
                     <i data-lucide="folder-kanban" class="w-3 h-3 text-[#799a87]"></i>
                     <span id="headerProjectName" class="truncate max-w-[100px] text-[11px] font-bold text-[#3d4942]">All Projects</span>
+                </button>
+
+                <!-- Workspace Template Marketplace Header Button -->
+                <button id="headerStoreBtn" type="button" class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-300 text-xs font-bold text-amber-900 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span class="text-[11px]">Templates Store</span>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200 text-amber-800">FREE & PRO</span>
                 </button>
 
                 <!-- AI Model Badge -->
@@ -1982,6 +2001,292 @@ $currentUser = getCurrentUser();
                 <button type="button" id="confirmClearMemoriesBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/20 flex items-center space-x-1.5 cursor-pointer">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     <span>Yes, Clear All</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 14: PREDEFINED WORKSPACE STORE & TEMPLATES MARKETPLACE -->
+    <div id="workspaceStoreModal" class="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#202725]/50 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <!-- Store Header -->
+            <div class="p-4 sm:p-5 border-b border-[#ddd8cc] bg-[#fcfaf5] flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-amber-600"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-[#202725] text-sm sm:text-base">Predefined Workspace Marketplace</h3>
+                            <span class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300">TURNKEY BLUEPRINTS</span>
+                        </div>
+                        <p class="text-[10px] sm:text-[11px] text-[#68716d]">Deploy industry-tailored workspaces pre-loaded with specialized C-suite AI teams, roadmaps & SOPs.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="relative flex-1 sm:w-56">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-[#68716d] absolute left-3 top-2.5"></i>
+                        <input type="text" id="storeSearchInput" placeholder="Search blueprints..." class="w-full bg-[#ffffff] border border-[#ddd8cc] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#202725] placeholder-[#9ca3af] focus:outline-none focus:border-[#173d34]">
+                    </div>
+                    <button id="closeWorkspaceStoreBtn" type="button" class="text-[#68716d] hover:text-[#173d34] p-1.5 rounded-lg hover:bg-[#ede8dc] transition-colors" title="Close Store">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div class="px-4 py-2.5 bg-[#f5f2e9] border-b border-[#ddd8cc] flex items-center space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 text-xs">
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-bold transition-all bg-[#173d34] text-[#fcfaf5] shadow-sm" data-filter="all">All Blueprints</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="free">🎁 Free Starters</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="paid">💎 Pro Suites ($USD)</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="content">Content & Media</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="ecommerce">E-Commerce & DTC</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="tech">SaaS & Tech</button>
+                <button type="button" class="store-filter-btn px-3 py-1 rounded-full font-semibold transition-all bg-[#ffffff] text-[#3d4942] hover:bg-[#ede8dc] border border-[#ddd8cc]" data-filter="business">Consulting & Property</button>
+            </div>
+
+            <!-- Templates Grid Container -->
+            <div class="p-4 sm:p-5 overflow-y-auto flex-1 bg-[#ffffff]">
+                <div id="workspaceStoreLoading" class="flex flex-col items-center justify-center py-16 space-y-3">
+                    <span class="w-8 h-8 border-3 border-[#173d34] border-t-transparent rounded-full animate-spin"></span>
+                    <span class="text-xs text-[#68716d] font-mono">Loading curated workspace blueprints...</span>
+                </div>
+                <div id="workspaceStoreGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Populated dynamically via JS -->
+                </div>
+                <div id="workspaceStoreEmpty" class="hidden text-center py-12">
+                    <div class="w-12 h-12 rounded-2xl bg-[#f5f2e9] text-[#68716d] flex items-center justify-center mx-auto mb-2">
+                        <i data-lucide="package-search" class="w-6 h-6"></i>
+                    </div>
+                    <div class="text-xs font-bold text-[#202725]">No workspace blueprints matched your search</div>
+                    <div class="text-[11px] text-[#68716d] mt-0.5">Try searching for keywords like "YouTube", "Marketing", "SaaS", or "Shopify"</div>
+                </div>
+            </div>
+
+            <!-- Store Footer Notice -->
+            <div class="p-3 sm:p-4 bg-[#fcfaf5] border-t border-[#ddd8cc] flex flex-col sm:flex-row items-center justify-between text-xs text-[#68716d] gap-2 flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="text-[11px]">Deploying a predefined workspace is voluntary. Your <strong>Primary Workspace</strong> remains untouched.</span>
+                </div>
+                <button type="button" onclick="document.getElementById('workspaceStoreModal').classList.add('hidden')" class="px-4 py-1.5 rounded-xl border border-[#ddd8cc] hover:bg-[#ede8dc] text-[#202725] text-xs font-semibold transition-all">
+                    Close Marketplace
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 15: WORKSPACE TEMPLATE PREVIEW DRAWER -->
+    <div id="workspacePreviewModal" class="fixed inset-0 z-[60] flex items-center justify-center p-2.5 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
+            <!-- Preview Header -->
+            <div id="previewHeaderBanner" class="p-4 sm:p-5 border-b border-[#ddd8cc] bg-gradient-to-r from-emerald-500/10 to-transparent flex items-start justify-between flex-shrink-0">
+                <div class="flex items-start space-x-3.5">
+                    <div id="previewIconBox" class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center flex-shrink-0 border border-emerald-500/30 shadow-sm mt-0.5">
+                        <i id="previewIcon" data-lucide="briefcase" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <h3 id="previewTitle" class="font-bold text-[#202725] text-base sm:text-lg">Workspace Title</h3>
+                            <span id="previewBadge" class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">STARTER</span>
+                            <span id="previewPriceBadge" class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-[#173d34] text-[#fcfaf5] shadow-sm">FREE</span>
+                        </div>
+                        <div id="previewDomain" class="text-xs text-[#173d34] font-semibold font-mono">Industry & Domain</div>
+                    </div>
+                </div>
+                <button id="closePreviewModalBtn" type="button" class="text-[#68716d] hover:text-[#173d34] p-1.5 rounded-lg hover:bg-[#ede8dc] transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Preview Body Details -->
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-[#ffffff]">
+                <!-- Description -->
+                <div>
+                    <h4 class="text-xs font-bold text-[#3d4942] uppercase tracking-wider mb-1.5">Executive Overview</h4>
+                    <p id="previewDescription" class="text-xs text-[#202725] leading-relaxed bg-[#fcfaf5] p-3 rounded-2xl border border-[#ddd8cc]"></p>
+                </div>
+
+                <!-- Features Highlights -->
+                <div>
+                    <h4 class="text-xs font-bold text-[#3d4942] uppercase tracking-wider mb-2">Turnkey Capabilities Included</h4>
+                    <div id="previewFeaturesList" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- AI Executive Team Roster -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-xs font-bold text-[#3d4942] uppercase tracking-wider">Specialized AI Executive Team</h4>
+                        <span id="previewTeamCountBadge" class="text-[10px] font-mono text-[#68716d]">4 Members</span>
+                    </div>
+                    <div id="previewExecutivesList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Starter Roadmaps & Projects -->
+                <div>
+                    <h4 class="text-xs font-bold text-[#3d4942] uppercase tracking-wider mb-2">Pre-Loaded Roadmaps & Deliverables</h4>
+                    <div id="previewProjectsList" class="space-y-2">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Starter SOPs & Tasks -->
+                <div>
+                    <h4 class="text-xs font-bold text-[#3d4942] uppercase tracking-wider mb-2">Standard Operating Procedures (SOP Checklists)</h4>
+                    <div id="previewTasksList" class="space-y-1.5">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Actions Footer -->
+            <div class="p-4 bg-[#f5f2e9] border-t border-[#ddd8cc] flex items-center justify-between flex-shrink-0">
+                <button type="button" id="previewBackBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-[#68716d] hover:bg-[#ede8dc] hover:text-[#202725] transition-colors">
+                    Back to Marketplace
+                </button>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="previewPrimaryActionBtn" class="px-5 py-2.5 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold shadow-md shadow-[#173d34]/20 transition-all flex items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span id="previewPrimaryActionText">Deploy Workspace</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 16: WORKSPACE CHECKOUT & PROMO CODE (SANDBOX SIMULATOR) -->
+    <div id="workspaceCheckoutModal" class="fixed inset-0 z-[70] flex items-center justify-center p-2.5 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
+            <!-- Checkout Header -->
+            <div class="p-4 sm:p-5 border-b border-[#ddd8cc] bg-gradient-to-r from-amber-500/10 to-transparent flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center flex-shrink-0 border border-amber-500/30">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-amber-700"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-[#202725] text-sm sm:text-base">Unlock Pro Blueprint</h3>
+                        <p class="text-[10px] text-[#68716d]">Secure checkout & instant provisioning</p>
+                    </div>
+                </div>
+                <button id="closeCheckoutModalBtn" type="button" class="text-[#68716d] hover:text-[#173d34] p-1.5 rounded-lg hover:bg-[#ede8dc] transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Checkout Body -->
+            <div class="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 bg-[#ffffff]">
+                <!-- Order Summary Card -->
+                <div class="p-3.5 rounded-2xl bg-[#fcfaf5] border border-[#ddd8cc] space-y-2.5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-[10px] font-mono uppercase font-bold text-[#173d34]" id="checkoutTemplateDomain">E-Commerce</div>
+                            <div class="text-sm font-bold text-[#202725]" id="checkoutTemplateTitle">Blueprint Title</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-base font-bold text-[#173d34]" id="checkoutPriceText">$29.00 USD</div>
+                            <div class="text-[9px] text-[#68716d]">One-Time Payment</div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-[#e8e3d9] text-[11px] text-[#68716d] space-y-1">
+                        <div class="flex items-center space-x-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0"></i>
+                            <span>Complete dedicated C-Suite AI executive roster</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0"></i>
+                            <span>Pre-loaded roadmaps, milestones & SOP checklists</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0"></i>
+                            <span>Lifetime access with unrestricted multi-venture switching</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sandbox Developer Notice -->
+                <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-900 flex items-start space-x-2.5">
+                    <i data-lucide="info" class="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <span class="font-bold block">Developer Test Sandbox Active</span>
+                        <span class="text-[11px] text-amber-800 leading-relaxed block mt-0.5">Test mode simulates successful payment instantly without charging any real funds.</span>
+                    </div>
+                </div>
+
+                <!-- Mock Payment Card Details -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-[#3d4942]">Test Card Number</label>
+                    <div class="relative">
+                        <i data-lucide="credit-card" class="w-4 h-4 text-[#68716d] absolute left-3 top-2.5"></i>
+                        <input type="text" id="sandboxCardInput" value="4242 •••• •••• 4242" readonly class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl pl-9 pr-3 py-2 text-xs font-mono text-[#202725] focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <label class="block text-[10px] text-[#68716d] mb-1">Expires</label>
+                            <input type="text" value="12/28" readonly class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-1.5 text-xs font-mono text-[#202725] focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-[#68716d] mb-1">CVC (Sandbox)</label>
+                            <input type="text" value="789" readonly class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-1.5 text-xs font-mono text-[#202725] focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instant Test Purchase CTA -->
+                <button type="button" id="submitSandboxPayBtn" class="w-full py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition-all shadow-md shadow-[#173d34]/20 cursor-pointer">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    <span id="sandboxPayBtnText">Simulate Successful Test Payment</span>
+                </button>
+
+                <!-- Divider: Or Promo Code -->
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-[#e8e3d9]"></div>
+                    <span class="flex-shrink mx-3 text-[10px] font-mono text-[#68716d] uppercase">Or Redeem Access Code</span>
+                    <div class="flex-grow border-t border-[#e8e3d9]"></div>
+                </div>
+
+                <!-- Promo / License Key Section -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center space-x-1.5">
+                        <input type="text" id="checkoutPromoInput" placeholder="Enter VIP/License Code (e.g. VIPPRO2026)" class="flex-1 bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs font-mono uppercase text-[#202725] focus:outline-none focus:border-[#173d34]">
+                        <button type="button" id="applyPromoBtn" class="px-3.5 py-2 bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] rounded-xl text-xs font-bold transition-all flex items-center space-x-1">
+                            <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                            <span>Apply</span>
+                        </button>
+                    </div>
+                    <div class="text-[10px] text-[#68716d] flex items-center justify-between">
+                        <span>VIP Codes: <code class="font-bold text-[#173d34]">VIPPRO2026</code>, <code class="font-bold text-[#173d34]">LAUNCHFREE</code></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Footer -->
+            <div class="p-3 bg-[#fcfaf5] border-t border-[#ddd8cc] text-center text-[10px] text-[#68716d] flex-shrink-0">
+                🔒 Safe & non-destructive. Added as an independent venture.
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 17: WORKSPACE DEPLOYMENT CELEBRATION MODAL -->
+    <div id="workspaceCelebrationModal" class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col text-center p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div class="w-14 h-14 rounded-3xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-500/30 shadow-inner">
+                <i data-lucide="check-check" class="w-7 h-7 text-emerald-600"></i>
+            </div>
+            <h3 class="font-bold text-[#202725] text-base mb-1" id="celebrationTitle">Workspace Ready!</h3>
+            <p class="text-xs text-[#68716d] leading-relaxed mb-4" id="celebrationDesc">
+                Your new workspace has been provisioned with its specialized AI executive team and starter deliverables.
+            </p>
+            <div class="space-y-2">
+                <button type="button" id="celebrationSwitchNowBtn" class="w-full py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold shadow-md shadow-[#173d34]/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
+                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
+                    <span>Switch to New Workspace Now</span>
+                </button>
+                <button type="button" id="celebrationStayBtn" class="w-full py-2 px-4 bg-[#ffffff] hover:bg-[#f5f2e9] text-[#68716d] hover:text-[#202725] rounded-xl text-xs font-semibold border border-[#ddd8cc] transition-all cursor-pointer">
+                    Stay in Primary Workspace
                 </button>
             </div>
         </div>

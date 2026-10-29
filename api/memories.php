@@ -21,9 +21,35 @@ if ($method === 'POST') {
         $stmt = $pdo->prepare("DELETE FROM memories WHERE user_id = :uid");
         $stmt->execute([':uid' => $userId]);
 
+        // Reset user onboarding state when memories are wiped
+        $resetUserStmt = $pdo->prepare("
+            UPDATE `users` 
+            SET onboarding_completed = 0, 
+                job_field = NULL, 
+                specialized_role = NULL, 
+                onboarding_data = NULL 
+            WHERE id = :id
+        ");
+        $resetUserStmt->execute([':id' => $userId]);
+
+        // Reset Chief of Staff executive role
+        $pdo->prepare("
+            UPDATE executives 
+            SET title = 'Chief of Staff & Lead Private Assistant', 
+                department = 'Office of the CEO', 
+                bio = 'Strategic partner, multi-agent orchestrator, and high-level project breakdown engine.',
+                personality = 'Authoritative yet approachable, highly structured, proactive, visionary'
+            WHERE is_chief_of_staff = 1
+        ")->execute();
+
+        // Delete any old onboarding sessions so a clean fresh welcome session can start
+        $delOldOnboard = $pdo->prepare("DELETE FROM sessions WHERE user_id = :uid AND (title LIKE '%Role Setup%' OR title LIKE '%Welcome%')");
+        $delOldOnboard->execute([':uid' => $userId]);
+
         sendJsonResponse([
             'success' => true,
-            'message' => 'All your memories cleared successfully'
+            'needs_onboarding' => true,
+            'message' => 'All your memories cleared successfully and onboarding has been reset.'
         ]);
     }
 
@@ -60,9 +86,35 @@ if ($method === 'DELETE') {
         $stmt = $pdo->prepare("DELETE FROM memories WHERE user_id = :uid");
         $stmt->execute([':uid' => $userId]);
 
+        // Reset user onboarding state when memories are wiped
+        $resetUserStmt = $pdo->prepare("
+            UPDATE `users` 
+            SET onboarding_completed = 0, 
+                job_field = NULL, 
+                specialized_role = NULL, 
+                onboarding_data = NULL 
+            WHERE id = :id
+        ");
+        $resetUserStmt->execute([':id' => $userId]);
+
+        // Reset Chief of Staff executive role
+        $pdo->prepare("
+            UPDATE executives 
+            SET title = 'Chief of Staff & Lead Private Assistant', 
+                department = 'Office of the CEO', 
+                bio = 'Strategic partner, multi-agent orchestrator, and high-level project breakdown engine.',
+                personality = 'Authoritative yet approachable, highly structured, proactive, visionary'
+            WHERE is_chief_of_staff = 1
+        ")->execute();
+
+        // Delete any old onboarding sessions so a clean fresh welcome session can start
+        $delOldOnboard = $pdo->prepare("DELETE FROM sessions WHERE user_id = :uid AND (title LIKE '%Role Setup%' OR title LIKE '%Welcome%')");
+        $delOldOnboard->execute([':uid' => $userId]);
+
         sendJsonResponse([
             'success' => true,
-            'message' => 'All your memories cleared successfully'
+            'needs_onboarding' => true,
+            'message' => 'All your memories cleared successfully and onboarding has been reset.'
         ]);
     }
 

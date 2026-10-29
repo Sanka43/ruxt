@@ -2,6 +2,7 @@
 // api/chat.php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/agent_tools.php';
+require_once __DIR__ . '/workspace_store.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJsonResponse(['error' => 'Method not allowed'], 405);
@@ -90,6 +91,43 @@ if ($sessionId <= 0) {
             if (mb_strlen($userMessage) > 30) $updatedTitle .= '...';
             $updateTitleStmt = $pdo->prepare("UPDATE sessions SET title = :title WHERE id = :id AND user_id = :uid");
             $updateTitleStmt->execute([':title' => $updatedTitle, ':id' => $sessionId, ':uid' => $userId]);
+        }
+    }
+}
+
+// 1.5 Auto-Detect Predefined Free Workspace Template Selection
+$selectedTemplate = null;
+$createdWorkspace = null;
+if (!empty($userMessage)) {
+    $cleanTplName = trim(preg_replace('/^[\p{Emoji}\s]+/u', '', $userMessage));
+    $cleanTplName = trim(preg_replace('/^(my field is|workspace|i choose|i want to use|i select)\s*:?\s*/i', '', $cleanTplName));
+
+    if (mb_strlen($cleanTplName) >= 3) {
+        $tplStmt = $pdo->prepare("SELECT * FROM workspace_templates WHERE is_active = 1 AND (title = :t OR title LIKE :t2 OR slug = :s) LIMIT 1");
+        $tplStmt->execute([
+            ':t' => $cleanTplName,
+            ':t2' => "%{$cleanTplName}%",
+            ':s' => strtolower(str_replace(' ', '-', $cleanTplName))
+        ]);
+        $selectedTemplate = $tplStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($selectedTemplate && $selectedTemplate['tier'] === 'free') {
+            $chkV = $pdo->prepare("SELECT id, name, domain, description, icon, color FROM ventures WHERE user_id = :uid AND name = :name LIMIT 1");
+            $chkV->execute([':uid' => $userId, ':name' => $selectedTemplate['title']]);
+            $existingV = $chkV->fetch(PDO::FETCH_ASSOC);
+
+            if (!$existingV) {
+                $txId = 'FREE-CLAIM-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+                $provRes = provisionWorkspaceFromTemplate($pdo, $userId, $selectedTemplate, 'free_claim', 0.00, $txId);
+                if ($provRes['success']) {
+                    $createdWorkspace = $provRes['venture'];
+                    $ventureId = (int)$createdWorkspace['id'];
+                    $pdo->prepare("UPDATE sessions SET venture_id = :vid, project_name = :pname WHERE id = :id")->execute([':vid' => $ventureId, ':pname' => $selectedTemplate['title'], ':id' => $sessionId]);
+                }
+            } else {
+                $ventureId = (int)$existingV['id'];
+                $pdo->prepare("UPDATE sessions SET venture_id = :vid, project_name = :pname WHERE id = :id")->execute([':vid' => $ventureId, ':pname' => $existingV['name'], ':id' => $sessionId]);
+            }
         }
     }
 }
@@ -209,6 +247,15 @@ ONBOARDING & DYNAMIC ROLE IDENTIFICATION ENGINE:
   }]]
   The system will parse this directive, save it permanently to the database, update your profile, and display a celebratory activation card to the user.
 ";
+        if ($selectedTemplate) {
+            $onboardingInstructions .= "
+PREDEFINED WORKSPACE SELECTION DETECTED:
+- The CEO has selected the Free Workspace: \"{$selectedTemplate['title']}\" (Domain: {$selectedTemplate['domain']}).
+- The workspace has been provisioned and its AI Specialist Team is synchronized live!
+- Enthusiastically congratulate the CEO on launching their {$selectedTemplate['title']} workspace!
+- Immediately emit the CONFIGURE_ROLE directive matching this domain ({$selectedTemplate['domain']})!
+";
+        }
     }
 
     $delegationInstructions = "{$onboardingInstructions}
@@ -674,8 +721,7 @@ if (preg_match('/\[\[CONFIGURE_ROLE:\s*(\{.*?\})\s*\]\]/is', $reply, $roleMatch)
 }
 
 // 5.19 Auto-Extract and Execute [[CREATE_WORKSPACE: ...]]
-$createdWorkspace = null;
-if (preg_match('/\[\[CREATE_WORKSPACE:\s*(\{.*?\})\s*\]\]/is', $reply, $wsMatch)) {
+if (empty($createdWorkspace) && preg_match('/\[\[CREATE_WORKSPACE:\s*(\{.*?\})\s*\]\]/is', $reply, $wsMatch)) {
     $wsJson = trim($wsMatch[1]);
     $wsData = json_decode($wsJson, true);
     if (is_array($wsData) && !empty($wsData['name'])) {

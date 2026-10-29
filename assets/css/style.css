@@ -593,3 +593,25 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
 }
+
+/* ========================================================
+   Workspace Marketplace & Pro Store Badges
+   ======================================================== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.store-pro-glow {
+  box-shadow: 0 4px 20px -2px rgba(183, 132, 63, 0.18);
+}

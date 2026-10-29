@@ -98,7 +98,57 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
-    // Delete session and clean up attached files
+    $clearAll = (isset($_GET['all']) && ($_GET['all'] === 'true' || $_GET['all'] === '1')) ||
+                (isset($_GET['id']) && strtolower(trim((string)$_GET['id'])) === 'all');
+
+    $baseAttachmentsDir = realpath(__DIR__ . '/../uploads/attachments');
+
+    if ($clearAll) {
+        // Delete all sessions for this user and their attachments
+        $attStmt = $pdo->prepare("
+            SELECT m.attachments 
+            FROM messages m 
+            JOIN sessions s ON s.id = m.session_id 
+            WHERE s.user_id = :uid AND m.attachments IS NOT NULL AND m.attachments != ''
+        ");
+        $attStmt->execute([':uid' => $userId]);
+        $msgAttachments = $attStmt->fetchAll();
+
+        foreach ($msgAttachments as $mRow) {
+            $atts = json_decode($mRow['attachments'], true);
+            if (is_array($atts)) {
+                foreach ($atts as $att) {
+                    $filePath = !empty($att['file_path']) ? $att['file_path'] : (!empty($att['url']) ? $att['url'] : null);
+                    if ($filePath && $baseAttachmentsDir) {
+                        $fullPath = realpath(__DIR__ . '/../' . ltrim($filePath, '/\\'));
+                        if ($fullPath && file_exists($fullPath) && strpos($fullPath, $baseAttachmentsDir) === 0) {
+                            @unlink($fullPath);
+                        }
+                    }
+                }
+            }
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM sessions WHERE user_id = :uid");
+        $stmt->execute([':uid' => $userId]);
+
+        // When all chats are deleted, reset onboarding status if memories are also 0
+        $memCountStmt = $pdo->prepare("SELECT COUNT(*) FROM memories WHERE user_id = :uid");
+        $memCountStmt->execute([':uid' => $userId]);
+        $totalMemories = (int)$memCountStmt->fetchColumn();
+        if ($totalMemories === 0) {
+            resetUserOnboarding($userId);
+        }
+
+        sendJsonResponse([
+            'success' => true,
+            'remaining_sessions' => 0,
+            'needs_onboarding' => true,
+            'message' => 'All conversations cleared'
+        ]);
+    }
+
+    // Delete single session and clean up attached files
     $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
     if ($id <= 0) {
         sendJsonResponse(['error' => 'Invalid session ID'], 400);
@@ -112,7 +162,6 @@ if ($method === 'DELETE') {
         $attStmt = $pdo->prepare("SELECT attachments FROM messages WHERE session_id = :id AND attachments IS NOT NULL AND attachments != ''");
         $attStmt->execute([':id' => $id]);
         $msgAttachments = $attStmt->fetchAll();
-        $baseAttachmentsDir = realpath(__DIR__ . '/../uploads/attachments');
 
         foreach ($msgAttachments as $mRow) {
             $atts = json_decode($mRow['attachments'], true);
@@ -133,7 +182,25 @@ if ($method === 'DELETE') {
         $stmt->execute([':id' => $id, ':uid' => $userId]);
     }
 
-    sendJsonResponse(['success' => true]);
+    // Check remaining sessions for user
+    $remStmt = $pdo->prepare("SELECT COUNT(*) FROM sessions WHERE user_id = :uid");
+    $remStmt->execute([':uid' => $userId]);
+    $remainingSessions = (int)$remStmt->fetchColumn();
+
+    if ($remainingSessions === 0) {
+        $memCountStmt = $pdo->prepare("SELECT COUNT(*) FROM memories WHERE user_id = :uid");
+        $memCountStmt->execute([':uid' => $userId]);
+        $totalMemories = (int)$memCountStmt->fetchColumn();
+        if ($totalMemories === 0) {
+            resetUserOnboarding($userId);
+        }
+    }
+
+    sendJsonResponse([
+        'success' => true,
+        'remaining_sessions' => $remainingSessions,
+        'needs_onboarding' => ($remainingSessions === 0)
+    ]);
 }
 
 if ($method === 'PATCH') {
