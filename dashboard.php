@@ -353,49 +353,125 @@ $currentUser = requireAdmin();
             </section>
 
             <!-- ======================================================== -->
-            <!-- 2. WORKSPACES VIEW                                       -->
+            <!-- 2. WORKSPACES VIEW (TWO-TIER DEV TEAM & USER INSTANCES)   -->
             <!-- ======================================================== -->
             <section id="view-workspaces" class="space-y-4 hidden">
-                <!-- Filter Bar -->
-                <div class="p-4 rounded-2xl bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                    <div class="flex-1 flex flex-col sm:flex-row gap-2">
-                        <!-- Search Box -->
-                        <div class="relative flex-1">
-                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#68716d]"></i>
-                            <input type="text" id="workspaceSearchInput" oninput="filterWorkspaces()" placeholder="Search workspaces by title, domain, or owner..." class="w-full pl-9 pr-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
-                        </div>
-                        <!-- Owner Filter -->
-                        <select id="workspaceOwnerFilter" onchange="filterWorkspaces()" class="px-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
-                            <option value="0">All Owners</option>
-                        </select>
+                <!-- Two-Tier Sub-Tab Switcher -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#ddd8cc] pb-3">
+                    <div class="flex items-center space-x-1 bg-[#f5f2e9] p-1 rounded-2xl border border-[#ddd8cc]">
+                        <button type="button" onclick="switchWsSubTab('blueprints')" id="wsTabBtn-blueprints" class="px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm bg-[#173d34] text-white flex items-center space-x-2">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <span>Workspace Blueprints (Dev Team)</span>
+                            <span id="badge-blueprints-count" class="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full font-mono">0</span>
+                        </button>
+                        <button type="button" onclick="switchWsSubTab('instances')" id="wsTabBtn-instances" class="px-4 py-2 text-xs font-semibold rounded-xl transition-all text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] flex items-center space-x-2">
+                            <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                            <span>Client Active Workspaces (Users)</span>
+                            <span id="badge-instances-count" class="text-[10px] bg-black/10 px-1.5 py-0.2 rounded-full font-mono">0</span>
+                        </button>
                     </div>
-                    <button onclick="openNewWorkspaceModal()" class="px-4 py-2 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>Create Workspace</span>
-                    </button>
+
+                    <!-- Right Quick Actions -->
+                    <div class="flex items-center space-x-2" id="wsSubTabActions">
+                        <button onclick="openUploadBlueprintModal()" class="px-3.5 py-2 bg-white hover:bg-[#fcfaf5] text-[#173d34] border border-[#ddd8cc] hover:border-[#173d34] rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                            <span>Upload Blueprint (.json)</span>
+                        </button>
+                        <button onclick="openCreateBlueprintModal()" class="px-3.5 py-2 bg-[#173d34] hover:bg-[#285c4e] text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Create Blueprint</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Workspaces Table / Grid Container -->
-                <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl overflow-hidden shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-[#f5f2e9] text-[#68716d] border-b border-[#ddd8cc] font-bold font-mono uppercase text-[10px]">
-                                    <th class="p-3.5">Workspace</th>
-                                    <th class="p-3.5">Owner</th>
-                                    <th class="p-3.5 text-center">Team</th>
-                                    <th class="p-3.5 text-center">Roadmaps</th>
-                                    <th class="p-3.5 text-center">Tasks</th>
-                                    <th class="p-3.5">Created Date</th>
-                                    <th class="p-3.5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="workspacesTableBody" class="divide-y divide-[#e8e3d9]">
-                                <tr>
-                                    <td colspan="7" class="p-8 text-center text-[#68716d]">Loading workspaces...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <!-- SUB-PANEL 1: WORKSPACE BLUEPRINTS (DEV TEAM CATALOG) -->
+                <div id="wsSubView-blueprints" class="space-y-4">
+                    <!-- Filter Bar for Blueprints -->
+                    <div class="p-3.5 rounded-2xl bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+                        <div class="flex-1 flex flex-col sm:flex-row gap-2">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#68716d]"></i>
+                                <input type="text" id="blueprintSearchInput" oninput="filterBlueprints()" placeholder="Search blueprints by title, domain, or slug..." class="w-full pl-9 pr-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
+                            </div>
+                            <select id="blueprintTierFilter" onchange="filterBlueprints()" class="px-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
+                                <option value="all">All Tiers</option>
+                                <option value="free">Free Starter</option>
+                                <option value="paid">Paid Premium</option>
+                            </select>
+                            <select id="blueprintStatusFilter" onchange="filterBlueprints()" class="px-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
+                                <option value="all">All Statuses</option>
+                                <option value="1">Live in Store</option>
+                                <option value="0">Draft (Hidden)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Blueprints Table -->
+                    <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-[#f5f2e9] text-[#68716d] border-b border-[#ddd8cc] font-bold font-mono uppercase text-[10px]">
+                                        <th class="p-3.5">Blueprint Title & Domain</th>
+                                        <th class="p-3.5">Tier & Pricing</th>
+                                        <th class="p-3.5 text-center">Dream Team</th>
+                                        <th class="p-3.5 text-center">Deliverables</th>
+                                        <th class="p-3.5 text-center">Store Status</th>
+                                        <th class="p-3.5 text-center">Client Adoptions</th>
+                                        <th class="p-3.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blueprintsTableBody" class="divide-y divide-[#e8e3d9]">
+                                    <tr>
+                                        <td colspan="7" class="p-8 text-center text-[#68716d]">Loading blueprints catalog...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-PANEL 2: CLIENT ACTIVE INSTANCES (USER WORKSPACES) -->
+                <div id="wsSubView-instances" class="space-y-4 hidden">
+                    <!-- Filter Bar for Instances -->
+                    <div class="p-3.5 rounded-2xl bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+                        <div class="flex-1 flex flex-col sm:flex-row gap-2">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#68716d]"></i>
+                                <input type="text" id="workspaceSearchInput" oninput="filterWorkspaces()" placeholder="Search active client workspaces by name or owner..." class="w-full pl-9 pr-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
+                            </div>
+                            <select id="workspaceOwnerFilter" onchange="filterWorkspaces()" class="px-3 py-2 text-xs bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl focus:outline-none focus:border-[#173d34]">
+                                <option value="0">All Owners</option>
+                            </select>
+                        </div>
+                        <button onclick="openNewWorkspaceModal()" class="px-4 py-2 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Provision Custom to User</span>
+                        </button>
+                    </div>
+
+                    <!-- Workspaces Table / Grid Container -->
+                    <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-[#f5f2e9] text-[#68716d] border-b border-[#ddd8cc] font-bold font-mono uppercase text-[10px]">
+                                        <th class="p-3.5">Workspace</th>
+                                        <th class="p-3.5">Assigned Client</th>
+                                        <th class="p-3.5 text-center">Team</th>
+                                        <th class="p-3.5 text-center">Roadmaps</th>
+                                        <th class="p-3.5 text-center">Tasks</th>
+                                        <th class="p-3.5">Created Date</th>
+                                        <th class="p-3.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workspacesTableBody" class="divide-y divide-[#e8e3d9]">
+                                    <tr>
+                                        <td colspan="7" class="p-8 text-center text-[#68716d]">Loading workspaces...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -912,7 +988,314 @@ $currentUser = requireAdmin();
         </div>
     </div>
 
-    <!-- MODAL 6: CONFIRM DELETE MODAL -->
+    <!-- MODAL 6: UPLOAD WORKSPACE BLUEPRINT (DEV TEAM) -->
+    <div id="modalUploadBlueprint" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div class="px-6 py-4 bg-[#f5f2e9] border-b border-[#ddd8cc] flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-[#173d34] text-white flex items-center justify-center">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-[#202725]">Upload Workspace Blueprint</h3>
+                        <p class="text-[10px] text-[#68716d]">Import pre-built JSON configuration crafted by Dev Team</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalUploadBlueprint')" class="text-[#68716d] hover:text-[#173d34] p-1.5 rounded-xl hover:bg-[#e8e3d9]">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="formUploadBlueprint" onsubmit="submitUploadBlueprint(event)" class="p-6 overflow-y-auto space-y-4 text-xs">
+                <!-- Dropzone / File Picker -->
+                <div>
+                    <label class="block font-semibold text-[#202725] mb-1">Select Blueprint File (.json)</label>
+                    <div class="border-2 border-dashed border-[#ddd8cc] hover:border-[#173d34] rounded-2xl p-4 text-center bg-[#fcfaf5] transition-colors cursor-pointer" onclick="document.getElementById('blueprintFileInput').click()">
+                        <i data-lucide="file-code-2" class="w-7 h-7 mx-auto text-[#173d34] mb-1"></i>
+                        <span class="text-xs font-bold text-[#202725] block" id="blueprintFileLabel">Click or drag a .json blueprint file</span>
+                        <span class="text-[10px] text-[#68716d]">Supports official RuXt Blueprint schemas</span>
+                        <input type="file" id="blueprintFileInput" accept=".json" class="hidden" onchange="handleBlueprintFileSelected(event)">
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <div class="flex-1 h-px bg-[#e8e3d9]"></div>
+                    <span class="text-[10px] text-[#68716d] font-mono uppercase font-bold">OR PASTE RAW JSON</span>
+                    <div class="flex-1 h-px bg-[#e8e3d9]"></div>
+                </div>
+
+                <!-- Raw JSON Textarea -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-semibold text-[#202725]">JSON Blueprint Code</label>
+                        <button type="button" onclick="previewBlueprintJson()" class="text-[10px] font-bold text-[#173d34] hover:underline flex items-center space-x-1">
+                            <i data-lucide="scan" class="w-3 h-3"></i>
+                            <span>Validate & Preview</span>
+                        </button>
+                    </div>
+                    <textarea id="blueprintJsonInput" rows="6" placeholder='{\n  "title": "FinTech & Payments Engine",\n  "domain": "FinTech",\n  "description": "...",\n  "executives": [...]\n}' class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl p-3 font-mono text-[11px] text-[#202725] focus:outline-none focus:border-[#173d34]" oninput="previewBlueprintJson()"></textarea>
+                </div>
+
+                <!-- Preview Card -->
+                <div id="blueprintPreviewBox" class="hidden p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1 text-xs">
+                    <div class="flex items-center justify-between font-bold">
+                        <span id="previewBpTitle">Title</span>
+                        <span id="previewBpDomain" class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800">Domain</span>
+                    </div>
+                    <div class="text-[11px] text-emerald-700" id="previewBpCounts">
+                        0 AI Executives &bull; 0 Roadmaps &bull; 0 Starter Tasks
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-[#ddd8cc] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modalUploadBlueprint')" class="px-4 py-2 border border-[#ddd8cc] hover:bg-[#ede8dc] rounded-xl font-bold text-[#68716d]">Cancel</button>
+                    <button type="submit" id="btnSubmitUploadBp" class="px-5 py-2 bg-[#173d34] hover:bg-[#285c4e] text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Upload & Publish to Catalog</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 7: VISUAL BLUEPRINT STUDIO (CREATE / EDIT TEMPLATE) -->
+    <div id="modalStudioBlueprint" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div class="px-6 py-4 bg-[#f5f2e9] border-b border-[#ddd8cc] flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-purple-700 text-white flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-[#202725]" id="studioModalTitle">Workspace Blueprint Studio</h3>
+                        <p class="text-[10px] text-[#68716d]">Design or fine-tune a pre-built workspace for users</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalStudioBlueprint')" class="text-[#68716d] hover:text-[#173d34] p-1.5 rounded-xl hover:bg-[#e8e3d9]">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="formStudioBlueprint" onsubmit="submitBlueprintStudio(event)" class="p-6 overflow-y-auto space-y-3.5 text-xs">
+                <input type="hidden" id="studioBpId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Blueprint Title *</label>
+                        <input type="text" id="studioBpTitle" required placeholder="e.g. Legal & Corporate Advisory Hub" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">URL Identifier (Slug)</label>
+                        <input type="text" id="studioBpSlug" placeholder="legal-advisory-hub (auto-generated if empty)" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Domain / Industry *</label>
+                        <input type="text" id="studioBpDomain" required placeholder="e.g. Legal & Compliance" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Catalog Badge</label>
+                        <input type="text" id="studioBpBadge" placeholder="e.g. FREE STARTER, ENTERPRISE ENGINE" value="DEV STARTER" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-[#202725] mb-1">Mission & Scope Description</label>
+                    <textarea id="studioBpDescription" rows="2" placeholder="Describe how this workspace empowers the user..." class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]"></textarea>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Tier</label>
+                        <select id="studioBpTier" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                            <option value="free">Free</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Price ($)</label>
+                        <input type="number" step="0.01" id="studioBpPrice" value="0.00" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Icon</label>
+                        <select id="studioBpIcon" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                            <option value="briefcase">💼 Briefcase</option>
+                            <option value="code">💻 Tech</option>
+                            <option value="video">🎬 Media</option>
+                            <option value="shopping-bag">🛍️ Retail</option>
+                            <option value="leaf">🌿 Nature</option>
+                            <option value="rocket">🚀 Growth</option>
+                            <option value="cpu">⚙️ Engineering</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#202725] mb-1">Color</label>
+                        <select id="studioBpColor" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                            <option value="indigo">Indigo</option>
+                            <option value="emerald">Emerald</option>
+                            <option value="amber">Amber</option>
+                            <option value="rose">Rose</option>
+                            <option value="purple">Purple</option>
+                            <option value="cyan">Cyan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- AI Team auto-generation checkbox -->
+                <div class="p-3 rounded-2xl bg-[#f5f2e9] border border-[#ddd8cc] flex items-center space-x-3">
+                    <input type="checkbox" id="studioBpAutoTeam" class="w-4 h-4 text-[#173d34] rounded focus:ring-0 cursor-pointer">
+                    <label for="studioBpAutoTeam" class="cursor-pointer select-none">
+                        <span class="font-bold text-[#173d34] block">Auto-generate 4-person Executive AI Team via Gemini</span>
+                        <span class="text-[10px] text-[#68716d] block">AI creates C-level avatars, specialized roles, personalities, and system prompts matching this domain</span>
+                    </label>
+                </div>
+
+                <div class="pt-3 border-t border-[#ddd8cc] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modalStudioBlueprint')" class="px-4 py-2 border border-[#ddd8cc] hover:bg-[#ede8dc] rounded-xl font-bold text-[#68716d]">Cancel</button>
+                    <button type="submit" id="btnSubmitStudioBp" class="px-5 py-2 bg-[#173d34] hover:bg-[#285c4e] text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Save to Catalog</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 8: DEPLOY BLUEPRINT TO USER -->
+    <div id="modalDeployTemplate" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 bg-[#173d34] text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Deploy Workspace to Client</h3>
+                        <p class="text-[10px] text-emerald-100">Directly activate pre-built workspace for a user</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalDeployTemplate')" class="text-white/80 hover:text-white p-1.5 rounded-xl hover:bg-white/10">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="formDeployTemplate" onsubmit="submitDeployTemplate(event)" class="p-6 space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-[#202725] mb-1">Select Target User *</label>
+                    <select id="deployTargetUserId" required class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-[#202725] mb-1">Select Workspace Blueprint *</label>
+                    <select id="deployTemplateId" required class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173d34]">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="p-3 rounded-2xl bg-[#f5f2e9] border border-[#ddd8cc] text-[11px] text-[#68716d]">
+                    <span class="font-bold text-[#173d34] block mb-0.5">Automated Provisioning</span>
+                    Clones the complete Executive AI dream team, starter roadmaps, deliverables, and prompts into the client's account instantly.
+                </div>
+
+                <div class="pt-3 border-t border-[#ddd8cc] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modalDeployTemplate')" class="px-4 py-2 border border-[#ddd8cc] hover:bg-[#ede8dc] rounded-xl font-bold text-[#68716d]">Cancel</button>
+                    <button type="submit" id="btnSubmitDeploy" class="px-5 py-2 bg-[#173d34] hover:bg-[#285c4e] text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        <span>Deploy Now</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 9: INSPECT BLUEPRINT (FULL EXECUTIVE DREAM TEAM & ADOPTIONS) -->
+    <div id="modalInspectTemplate" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 bg-gradient-to-r from-[#173d34] to-[#285c4e] text-white flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-white/15 text-white flex items-center justify-center font-bold text-lg">
+                        <i id="inspectTplIcon" data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h3 id="inspectTplTitle" class="text-base font-extrabold text-white">Blueprint Details</h3>
+                            <span id="inspectTplBadge" class="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-mono uppercase font-bold">STARTER</span>
+                        </div>
+                        <p id="inspectTplDomain" class="text-xs text-emerald-100">Domain</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalInspectTemplate')" class="text-white/80 hover:text-white p-1.5 rounded-xl hover:bg-white/10">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-5 text-xs">
+                <!-- Overview Row -->
+                <div class="p-3.5 rounded-2xl bg-[#fcfaf5] border border-[#ddd8cc] flex flex-col sm:flex-row justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] text-[#68716d] uppercase font-mono block">Pricing & Tier</span>
+                        <span id="inspectTplPrice" class="font-bold text-[#173d34] text-sm">Free</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-[#68716d] uppercase font-mono block">Status in Store</span>
+                        <span id="inspectTplStatus" class="font-bold text-emerald-700">Live in Store</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-[#68716d] uppercase font-mono block">Client Adoptions</span>
+                        <span id="inspectTplAdoptionsCount" class="font-bold text-[#202725] font-mono">0 Clients</span>
+                    </div>
+                </div>
+
+                <!-- Executives Committee -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-[#173d34] font-mono mb-2 flex items-center space-x-1.5">
+                        <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                        <span>Executive AI Committee</span>
+                    </h4>
+                    <div id="inspectTplExecList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Roadmaps & Tasks -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-[#173d34] font-mono mb-2 flex items-center space-x-1.5">
+                            <i data-lucide="folder-kanban" class="w-3.5 h-3.5"></i>
+                            <span>Starter Roadmaps</span>
+                        </h4>
+                        <div id="inspectTplProjList" class="space-y-1.5"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-[#173d34] font-mono mb-2 flex items-center space-x-1.5">
+                            <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                            <span>Starter Deliverables</span>
+                        </h4>
+                        <div id="inspectTplTaskList" class="space-y-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- Clients who adopted this workspace -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-[#173d34] font-mono mb-2 flex items-center space-x-1.5">
+                        <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                        <span>Active Client Users</span>
+                    </h4>
+                    <div id="inspectTplUsersList" class="space-y-1.5"></div>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-[#f5f2e9] border-t border-[#ddd8cc] flex justify-end">
+                <button type="button" onclick="closeModal('modalInspectTemplate')" class="px-5 py-2 bg-[#173d34] text-white rounded-xl font-bold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 10: CONFIRM DELETE MODAL -->
     <div id="modalConfirmDelete" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden">
         <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 text-center space-y-4">
             <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
@@ -939,8 +1322,10 @@ $currentUser = requireAdmin();
     <script>
         // Global State
         let currentActiveView = 'overview';
+        let currentWsSubTab = 'blueprints';
         let rawUsers = [];
         let rawWorkspaces = [];
+        let rawTemplates = [];
         let pendingDeleteAction = null;
 
         // View Navigation
@@ -957,7 +1342,7 @@ $currentUser = requireAdmin();
             // Header titles
             const titles = {
                 overview: ['Overview & Metrics', 'Real-time health, user analytics, and workspace telemetry'],
-                workspaces: ['Workspace Management', 'Monitor, configure, and provision AI workspaces across all client accounts'],
+                workspaces: ['Workspace Management & Blueprints', 'Design, upload, and deploy pre-built AI workspaces for users'],
                 users: ['User Management', 'Manage user credentials, assign admin roles, and inspect client activity'],
                 system: ['AI Engine & System Diagnostics', 'Gemini AI connection benchmark, token usage, and system specifications']
             };
@@ -974,10 +1359,40 @@ $currentUser = requireAdmin();
 
             // Lazy load data for views
             if (viewName === 'overview') loadOverviewStats();
-            if (viewName === 'workspaces') loadWorkspaces();
+            if (viewName === 'workspaces') {
+                loadTemplates();
+                loadWorkspaces();
+            }
             if (viewName === 'users') loadUsers();
             if (viewName === 'system') loadSystemInfo();
 
+            lucide.createIcons();
+        }
+
+        // Sub-Tab Switcher for Workspaces (Blueprints vs Instances)
+        function switchWsSubTab(tab) {
+            currentWsSubTab = tab;
+            const btnBp = document.getElementById('wsTabBtn-blueprints');
+            const btnIns = document.getElementById('wsTabBtn-instances');
+            const viewBp = document.getElementById('wsSubView-blueprints');
+            const viewIns = document.getElementById('wsSubView-instances');
+            const actions = document.getElementById('wsSubTabActions');
+
+            if (tab === 'blueprints') {
+                btnBp.className = 'px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm bg-[#173d34] text-white flex items-center space-x-2';
+                btnIns.className = 'px-4 py-2 text-xs font-semibold rounded-xl transition-all text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] flex items-center space-x-2';
+                viewBp.classList.remove('hidden');
+                viewIns.classList.add('hidden');
+                actions.classList.remove('hidden');
+                loadTemplates();
+            } else {
+                btnIns.className = 'px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm bg-[#173d34] text-white flex items-center space-x-2';
+                btnBp.className = 'px-4 py-2 text-xs font-semibold rounded-xl transition-all text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] flex items-center space-x-2';
+                viewIns.classList.remove('hidden');
+                viewBp.classList.add('hidden');
+                actions.classList.add('hidden');
+                loadWorkspaces();
+            }
             lucide.createIcons();
         }
 
@@ -1083,7 +1498,470 @@ $currentUser = requireAdmin();
         }
 
         // ==========================================
-        // 2. WORKSPACES MANAGEMENT
+        // 2. WORKSPACE BLUEPRINTS (DEV TEAM) & INSTANCES
+        // ==========================================
+        async function loadTemplates() {
+            try {
+                const res = await fetch('api/admin.php?action=templates');
+                const data = await res.json();
+                if (!data.success) return showToast(data.error || 'Failed to fetch blueprints', 'error');
+
+                rawTemplates = data.templates || [];
+                const bBadge = document.getElementById('badge-blueprints-count');
+                if (bBadge) bBadge.innerText = rawTemplates.length;
+
+                populateTemplateDropdowns();
+                renderTemplatesTable(rawTemplates);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderTemplatesTable(list) {
+            const tbody = document.getElementById('blueprintsTableBody');
+            if (!tbody) return;
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-[#68716d]">No workspace blueprints found. Click "Upload Blueprint" or "Create Blueprint" to add one.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(t => {
+                const isLive = parseInt(t.is_active) === 1;
+                return `
+                <tr class="hover:bg-[#fcfaf5] transition-colors">
+                    <td class="p-3.5">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-${t.color || 'indigo'}-50 text-${t.color || 'indigo'}-700 border border-${t.color || 'indigo'}-200 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="${t.icon || 'briefcase'}" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-bold text-[#202725] text-xs flex items-center gap-1.5">
+                                    <span class="truncate">${escapeHtml(t.title)}</span>
+                                    <span class="text-[9px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-mono font-semibold">${escapeHtml(t.badge || 'STARTER')}</span>
+                                </div>
+                                <div class="text-[10px] text-[#68716d] font-mono">${escapeHtml(t.domain)} &bull; <span class="text-[#8c5e1e]">/${escapeHtml(t.slug)}</span></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full font-mono font-bold text-[10px] uppercase ${t.tier === 'paid' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">
+                            ${t.tier === 'paid' ? '$' + Number(t.price).toFixed(2) + ' ' + (t.currency || 'USD') : 'FREE'}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-center font-mono font-bold text-[#173d34]">
+                        ${t.team_count || 0} Agents
+                    </td>
+                    <td class="p-3.5 text-center font-mono text-xs text-[#202725]">
+                        ${t.projects_count || 0} Roadmaps &bull; ${t.tasks_count || 0} SOPs
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="toggleTemplateStatus(${t.id})" class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full font-mono font-bold text-[10px] uppercase transition-all shadow-2xs ${
+                            isLive ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200'
+                        }" title="Click to toggle publish status">
+                            <span class="w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
+                            <span>${isLive ? 'Live in Store' : 'Draft'}</span>
+                        </button>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full font-mono font-bold text-[11px] bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20">
+                            ${t.adoption_count || 0} Clients
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-right">
+                        <div class="flex items-center justify-end space-x-1">
+                            <button onclick="openDeployTemplateModal(${t.id})" class="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors" title="Deploy Workspace to Client User">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="exportTemplateBlueprint(${t.id})" class="p-1.5 text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors" title="Export as JSON Blueprint">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="inspectTemplateDetails(${t.id})" class="p-1.5 text-[#173d34] hover:bg-[#173d34]/10 rounded-lg transition-colors" title="Inspect Full Dream Team & Roadmaps">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="openEditBlueprintModal(${t.id})" class="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors" title="Edit Blueprint">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="confirmDeleteTemplate(${t.id}, '${escapeHtml(t.title)}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Blueprint">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function filterBlueprints() {
+            const q = document.getElementById('blueprintSearchInput').value.toLowerCase().trim();
+            const tier = document.getElementById('blueprintTierFilter').value;
+            const status = document.getElementById('blueprintStatusFilter').value;
+
+            const filtered = rawTemplates.filter(t => {
+                const matchQ = !q || (t.title && t.title.toLowerCase().includes(q)) ||
+                               (t.domain && t.domain.toLowerCase().includes(q)) ||
+                               (t.slug && t.slug.toLowerCase().includes(q));
+                const matchTier = tier === 'all' || t.tier === tier;
+                const matchStatus = status === 'all' || String(t.is_active) === status;
+                return matchQ && matchTier && matchStatus;
+            });
+
+            renderTemplatesTable(filtered);
+        }
+
+        function populateTemplateDropdowns() {
+            const deploySelect = document.getElementById('deployTemplateId');
+            if (deploySelect) {
+                deploySelect.innerHTML = rawTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.title)} (${escapeHtml(t.domain)})</option>`).join('');
+            }
+        }
+
+        // Blueprint Upload Modal
+        function openUploadBlueprintModal() {
+            document.getElementById('formUploadBlueprint').reset();
+            document.getElementById('blueprintFileLabel').innerText = 'Click or drag a .json blueprint file';
+            document.getElementById('blueprintPreviewBox').classList.add('hidden');
+            document.getElementById('modalUploadBlueprint').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function handleBlueprintFileSelected(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('blueprintFileLabel').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('blueprintJsonInput').value = evt.target.result;
+                previewBlueprintJson();
+            };
+            reader.readAsText(file);
+        }
+
+        function previewBlueprintJson() {
+            const raw = document.getElementById('blueprintJsonInput').value.trim();
+            const previewBox = document.getElementById('blueprintPreviewBox');
+            if (!raw) {
+                previewBox.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(raw);
+                if (!data.title) {
+                    previewBox.classList.add('hidden');
+                    return;
+                }
+
+                document.getElementById('previewBpTitle').innerText = data.title;
+                document.getElementById('previewBpDomain').innerText = data.domain || 'General Operations';
+                
+                const execs = data.executives || data.executives_json || [];
+                const projs = data.projects || data.projects_json || [];
+                const tasks = data.tasks || data.tasks_json || [];
+
+                document.getElementById('previewBpCounts').innerText = `${execs.length} AI Executives • ${projs.length} Roadmaps • ${tasks.length} Deliverables`;
+                previewBox.classList.remove('hidden');
+            } catch (err) {
+                previewBox.classList.add('hidden');
+            }
+        }
+
+        async function submitUploadBlueprint(e) {
+            e.preventDefault();
+            const raw = document.getElementById('blueprintJsonInput').value.trim();
+            if (!raw) return showToast('Please select a JSON blueprint file or paste JSON code.', 'error');
+
+            let parsed = null;
+            try {
+                parsed = JSON.parse(raw);
+            } catch (err) {
+                return showToast('Invalid JSON syntax. Please verify and try again.', 'error');
+            }
+
+            const btn = document.getElementById('btnSubmitUploadBp');
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    action: 'upload_blueprint',
+                    ...parsed
+                };
+
+                const res = await fetch('api/admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(data.message || 'Blueprint uploaded and published!', 'success');
+                    closeModal('modalUploadBlueprint');
+                    loadTemplates();
+                    loadOverviewStats();
+                } else {
+                    showToast(data.error || 'Failed to upload blueprint', 'error');
+                }
+            } catch (err) {
+                showToast('Error uploading blueprint', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Blueprint Studio (Create / Edit)
+        function openCreateBlueprintModal() {
+            document.getElementById('formStudioBlueprint').reset();
+            document.getElementById('studioBpId').value = '';
+            document.getElementById('studioModalTitle').innerText = 'Create Workspace Blueprint';
+            document.getElementById('modalStudioBlueprint').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function openEditBlueprintModal(id) {
+            const t = rawTemplates.find(item => item.id == id);
+            if (!t) return;
+
+            document.getElementById('studioBpId').value = t.id;
+            document.getElementById('studioBpTitle').value = t.title;
+            document.getElementById('studioBpSlug').value = t.slug;
+            document.getElementById('studioBpDomain').value = t.domain;
+            document.getElementById('studioBpBadge').value = t.badge || 'DEV STARTER';
+            document.getElementById('studioBpDescription').value = t.description || '';
+            document.getElementById('studioBpTier').value = t.tier || 'free';
+            document.getElementById('studioBpPrice').value = t.price || '0.00';
+            document.getElementById('studioBpIcon').value = t.icon || 'briefcase';
+            document.getElementById('studioBpColor').value = t.color || 'indigo';
+            document.getElementById('studioBpAutoTeam').checked = false;
+
+            document.getElementById('studioModalTitle').innerText = 'Edit Workspace Blueprint';
+            document.getElementById('modalStudioBlueprint').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function submitBlueprintStudio(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitStudioBp');
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    action: 'upload_blueprint',
+                    id: document.getElementById('studioBpId').value,
+                    title: document.getElementById('studioBpTitle').value.trim(),
+                    slug: document.getElementById('studioBpSlug').value.trim(),
+                    domain: document.getElementById('studioBpDomain').value.trim(),
+                    badge: document.getElementById('studioBpBadge').value.trim(),
+                    description: document.getElementById('studioBpDescription').value.trim(),
+                    tier: document.getElementById('studioBpTier').value,
+                    price: parseFloat(document.getElementById('studioBpPrice').value) || 0.00,
+                    icon: document.getElementById('studioBpIcon').value,
+                    color: document.getElementById('studioBpColor').value,
+                    auto_generate_team: document.getElementById('studioBpAutoTeam').checked
+                };
+
+                const res = await fetch('api/admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(data.message || 'Blueprint saved successfully!', 'success');
+                    closeModal('modalStudioBlueprint');
+                    loadTemplates();
+                    loadOverviewStats();
+                } else {
+                    showToast(data.error || 'Failed to save blueprint', 'error');
+                }
+            } catch (err) {
+                showToast('Error saving blueprint', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function toggleTemplateStatus(id) {
+            try {
+                const res = await fetch('api/admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'toggle_template_status', id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadTemplates();
+                } else {
+                    showToast(data.error || 'Failed to toggle status', 'error');
+                }
+            } catch (err) {
+                showToast('Error toggling blueprint status', 'error');
+            }
+        }
+
+        function exportTemplateBlueprint(id) {
+            window.location.href = `api/admin.php?action=export_template&id=${id}`;
+            showToast('Downloading JSON blueprint...', 'info');
+        }
+
+        // Deploy to User
+        function openDeployTemplateModal(templateId) {
+            populateUserFilterDropdowns();
+            populateTemplateDropdowns();
+            if (templateId) {
+                document.getElementById('deployTemplateId').value = templateId;
+            }
+            document.getElementById('modalDeployTemplate').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function submitDeployTemplate(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitDeploy');
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    action: 'deploy_to_user',
+                    template_id: parseInt(document.getElementById('deployTemplateId').value),
+                    user_id: parseInt(document.getElementById('deployTargetUserId').value)
+                };
+
+                const res = await fetch('api/admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(data.message || 'Workspace deployed to client successfully!', 'success');
+                    closeModal('modalDeployTemplate');
+                    loadWorkspaces();
+                    loadTemplates();
+                    loadOverviewStats();
+                } else {
+                    showToast(data.error || 'Failed to deploy workspace', 'error');
+                }
+            } catch (err) {
+                showToast('Error deploying workspace to client', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Inspect Blueprint
+        async function inspectTemplateDetails(id) {
+            try {
+                const res = await fetch(`api/admin.php?action=template_details&id=${id}`);
+                const data = await res.json();
+                if (!data.success) return showToast(data.error || 'Could not load blueprint', 'error');
+
+                const t = data.template;
+                document.getElementById('inspectTplTitle').innerText = t.title;
+                document.getElementById('inspectTplDomain').innerText = t.domain;
+                document.getElementById('inspectTplBadge').innerText = t.badge || 'STARTER';
+                document.getElementById('inspectTplPrice').innerText = t.tier === 'paid' ? `$${Number(t.price).toFixed(2)} USD` : 'Free Starter';
+                document.getElementById('inspectTplStatus').innerText = parseInt(t.is_active) === 1 ? 'Live in Store' : 'Draft';
+                document.getElementById('inspectTplAdoptionsCount').innerText = `${data.adoptions ? data.adoptions.length : 0} Clients`;
+
+                // Render Executives
+                const execContainer = document.getElementById('inspectTplExecList');
+                if (t.executives && t.executives.length > 0) {
+                    execContainer.innerHTML = t.executives.map(ex => `
+                        <div class="p-2.5 rounded-2xl bg-[#ffffff] border border-[#ddd8cc] flex items-center space-x-2.5 shadow-2xs">
+                            <img src="${ex.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(ex.name)}" class="w-9 h-9 rounded-xl object-cover border border-[#ddd8cc]">
+                            <div class="min-w-0 flex-1">
+                                <div class="font-bold text-[#202725] text-xs truncate">${escapeHtml(ex.name)}</div>
+                                <div class="text-[10px] text-[#173d34] font-semibold truncate">${escapeHtml(ex.title)}</div>
+                                <div class="text-[9px] text-[#68716d] font-mono truncate">${escapeHtml(ex.department)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    execContainer.innerHTML = '<div class="text-xs text-[#68716d] p-3 text-center col-span-2">No executives configured.</div>';
+                }
+
+                // Render Roadmaps
+                const projContainer = document.getElementById('inspectTplProjList');
+                if (t.projects && t.projects.length > 0) {
+                    projContainer.innerHTML = t.projects.map(p => `
+                        <div class="p-2 rounded-xl bg-[#ffffff] border border-[#ddd8cc] flex items-center justify-between">
+                            <span class="font-bold text-[#202725] text-xs truncate">${escapeHtml(p.name)}</span>
+                            <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 uppercase">${escapeHtml(p.status || 'active')}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    projContainer.innerHTML = '<div class="text-xs text-[#68716d] p-2">None</div>';
+                }
+
+                // Render Tasks
+                const taskContainer = document.getElementById('inspectTplTaskList');
+                if (t.tasks && t.tasks.length > 0) {
+                    taskContainer.innerHTML = t.tasks.map(tsk => `
+                        <div class="p-2 rounded-xl bg-[#ffffff] border border-[#ddd8cc] flex items-center justify-between">
+                            <span class="text-xs text-[#202725] truncate">${escapeHtml(tsk.title)}</span>
+                            <span class="text-[9px] font-mono font-bold text-[#68716d]">${escapeHtml(tsk.priority || 'Med')}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    taskContainer.innerHTML = '<div class="text-xs text-[#68716d] p-2">None</div>';
+                }
+
+                // Render Adoptions
+                const adoptContainer = document.getElementById('inspectTplUsersList');
+                if (data.adoptions && data.adoptions.length > 0) {
+                    adoptContainer.innerHTML = data.adoptions.map(u => `
+                        <div class="p-2 rounded-xl bg-[#ffffff] border border-[#ddd8cc] flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.user_name)}" class="w-6 h-6 rounded-lg object-cover">
+                                <span class="font-bold text-[#202725] text-xs">${escapeHtml(u.user_name)} (@${escapeHtml(u.username)})</span>
+                            </div>
+                            <span class="text-[10px] text-[#68716d] font-mono">${u.created_at ? u.created_at.split(' ')[0] : ''}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    adoptContainer.innerHTML = '<div class="text-xs text-[#68716d] p-2">No clients have adopted this workspace yet.</div>';
+                }
+
+                document.getElementById('modalInspectTemplate').classList.remove('hidden');
+                lucide.createIcons();
+            } catch (err) {
+                showToast('Failed to inspect blueprint', 'error');
+            }
+        }
+
+        function confirmDeleteTemplate(id, title) {
+            document.getElementById('deleteModalTitle').innerText = 'Delete Workspace Blueprint';
+            document.getElementById('deleteModalDesc').innerText = `Are you sure you want to delete blueprint "${title}" from the system catalog? Existing client instances will remain unaffected.`;
+
+            pendingDeleteAction = async () => {
+                const res = await fetch('api/admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_template', id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Blueprint deleted from catalog', 'success');
+                    closeModal('modalConfirmDelete');
+                    loadTemplates();
+                } else {
+                    showToast(data.error || 'Failed to delete template', 'error');
+                }
+            };
+
+            document.getElementById('modalConfirmDelete').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // 2.B CLIENT ACTIVE WORKSPACES (INSTANCES)
         // ==========================================
         async function loadWorkspaces() {
             try {
@@ -1092,7 +1970,12 @@ $currentUser = requireAdmin();
                 if (!data.success) return showToast(data.error || 'Failed to fetch workspaces', 'error');
 
                 rawWorkspaces = data.workspaces || [];
-                document.getElementById('badge-workspaces-count').innerText = rawWorkspaces.length;
+                const iBadge = document.getElementById('badge-instances-count');
+                if (iBadge) iBadge.innerText = rawWorkspaces.length;
+                
+                const wBadge = document.getElementById('badge-workspaces-count');
+                if (wBadge) wBadge.innerText = rawWorkspaces.length;
+
                 populateUserFilterDropdowns();
                 renderWorkspacesTable(rawWorkspaces);
             } catch (err) {
@@ -1714,6 +2597,7 @@ $currentUser = requireAdmin();
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             loadOverviewStats();
+            loadTemplates();
             loadWorkspaces();
             loadUsers();
             loadSystemInfo();

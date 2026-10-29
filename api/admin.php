@@ -817,6 +817,526 @@ if ($action === 'delete_workspace' && $method === 'POST') {
 }
 
 // -------------------------------------------------------------
+// 3.B WORKSPACE TEMPLATES & BLUEPRINTS (DEV-TEAM PUBLISHING & UPLOAD)
+// -------------------------------------------------------------
+
+// HELPER: Deploy template to user
+function adminDeployTemplateToUser($pdo, $userId, $template) {
+    $pdo->beginTransaction();
+    try {
+        // 1. Insert Venture
+        $insVenture = $pdo->prepare("
+            INSERT INTO `ventures` (`name`, `domain`, `description`, `icon`, `color`, `user_id`)
+            VALUES (:name, :domain, :description, :icon, :color, :uid)
+        ");
+        $insVenture->execute([
+            ':name' => $template['title'],
+            ':domain' => $template['domain'],
+            ':description' => $template['description'] ?? '',
+            ':icon' => $template['icon'] ?: 'briefcase',
+            ':color' => $template['color'] ?: 'indigo',
+            ':uid' => $userId
+        ]);
+        $newVentureId = (int)$pdo->lastInsertId();
+
+        // 2. Clone Executives
+        $executives = is_array($template['executives_json']) ? $template['executives_json'] : (json_decode($template['executives_json'], true) ?: []);
+        $avatarMap = [];
+
+        if (!empty($executives)) {
+            $insExec = $pdo->prepare("
+                INSERT INTO `executives` 
+                (`name`, `title`, `department`, `avatar_url`, `bio`, `personality`, `system_prompt`, `is_system`, `is_chief_of_staff`, `venture_id`, `voice_id`, `voice_gender`)
+                VALUES (:name, :title, :department, :avatar_url, :bio, :personality, :system_prompt, 0, 0, :venture_id, :voice_id, :voice_gender)
+            ");
+
+            foreach ($executives as $ex) {
+                $name = $ex['name'] ?? 'Executive';
+                $title = $ex['title'] ?? 'Specialist';
+                $dept = $ex['department'] ?? $template['domain'];
+                $avatar = $ex['avatar_url'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80';
+                $bio = $ex['bio'] ?? '';
+                $personality = $ex['personality'] ?? 'Strategic and driven';
+                $prompt = $ex['system_prompt'] ?? "You are {$name}, {$title}. Advise the user with precision.";
+                $voiceId = $ex['voice_id'] ?? 'nova';
+                $voiceGender = $ex['voice_gender'] ?? 'female';
+
+                $insExec->execute([
+                    ':name' => $name,
+                    ':title' => $title,
+                    ':department' => $dept,
+                    ':avatar_url' => $avatar,
+                    ':bio' => $bio,
+                    ':personality' => $personality,
+                    ':system_prompt' => $prompt,
+                    ':venture_id' => $newVentureId,
+                    ':voice_id' => $voiceId,
+                    ':voice_gender' => $voiceGender
+                ]);
+                $avatarMap[$name] = $avatar;
+            }
+        }
+
+        // 3. Clone Projects
+        $projects = is_array($template['projects_json']) ? $template['projects_json'] : (json_decode($template['projects_json'], true) ?: []);
+        $projectIdMap = [];
+
+        if (!empty($projects)) {
+            $insProj = $pdo->prepare("
+                INSERT INTO `projects` (`venture_id`, `name`, `description`, `status`, `color`, `icon`, `user_id`)
+                VALUES (:venture_id, :name, :description, :status, :color, :icon, :uid)
+            ");
+
+            foreach ($projects as $pr) {
+                $pName = $pr['name'] ?? 'Core Roadmap';
+                $pDesc = $pr['description'] ?? '';
+                $pStatus = $pr['status'] ?? 'active';
+                $pColor = $pr['color'] ?? 'indigo';
+                $pIcon = $pr['icon'] ?? 'folder-kanban';
+
+                $insProj->execute([
+                    ':venture_id' => $newVentureId,
+                    ':name' => $pName,
+                    ':description' => $pDesc,
+                    ':status' => $pStatus,
+                    ':color' => $pColor,
+                    ':icon' => $pIcon,
+                    ':uid' => $userId
+                ]);
+                $newPId = (int)$pdo->lastInsertId();
+                $projectIdMap[$pName] = $newPId;
+            }
+        }
+
+        // 4. Clone Tasks
+        $tasks = is_array($template['tasks_json']) ? $template['tasks_json'] : (json_decode($template['tasks_json'], true) ?: []);
+        if (!empty($tasks)) {
+            $insTask = $pdo->prepare("
+                INSERT INTO `notes` 
+                (`title`, `content`, `is_done`, `due_date`, `assigned_to`, `assigned_avatar`, `priority`, `status`, `venture_id`, `project_id`, `project_name`, `user_id`)
+                VALUES (:title, :content, :is_done, :due_date, :assigned_to, :assigned_avatar, :priority, :status, :venture_id, :project_id, :project_name, :uid)
+            ");
+
+            $defaultProjectId = !empty($projectIdMap) ? reset($projectIdMap) : null;
+            $defaultProjectName = !empty($projectIdMap) ? key($projectIdMap) : null;
+
+            foreach ($tasks as $tsk) {
+                $tTitle = $tsk['title'] ?? 'Task';
+                $tContent = $tsk['content'] ?? '';
+                $tStatus = $tsk['status'] ?? 'todo';
+                $isDone = ($tStatus === 'completed') ? 1 : 0;
+                $tDue = $tsk['due_date'] ?? 'This week';
+                $tAssign = $tsk['assigned_to'] ?? null;
+                $tAvatar = ($tAssign && isset($avatarMap[$tAssign])) ? $avatarMap[$tAssign] : null;
+                $tPriority = $tsk['priority'] ?? 'Medium';
+
+                $insTask->execute([
+                    ':title' => $tTitle,
+                    ':content' => $tContent,
+                    ':is_done' => $isDone,
+                    ':due_date' => $tDue,
+                    ':assigned_to' => $tAssign,
+                    ':assigned_avatar' => $tAvatar,
+                    ':priority' => $tPriority,
+                    ':status' => $tStatus,
+                    ':venture_id' => $newVentureId,
+                    ':project_id' => $defaultProjectId,
+                    ':project_name' => $defaultProjectName,
+                    ':uid' => $userId
+                ]);
+            }
+        }
+
+        // 5. Record Purchase / Deployment
+        $insPurchase = $pdo->prepare("
+            INSERT INTO `workspace_purchases` 
+            (`user_id`, `template_id`, `template_slug`, `amount_paid`, `currency`, `payment_method`, `transaction_id`, `status`)
+            VALUES (:uid, :tid, :slug, 0.00, :currency, 'admin_deploy', :txnid, 'completed')
+        ");
+        $insPurchase->execute([
+            ':uid' => $userId,
+            ':tid' => (int)($template['id'] ?? 0),
+            ':slug' => $template['slug'] ?? 'custom-template',
+            ':currency' => $template['currency'] ?: 'USD',
+            ':txnid' => 'DEPLOY-' . strtoupper(uniqid())
+        ]);
+
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'venture_id' => $newVentureId,
+            'name' => $template['title'],
+            'executives_count' => count($executives),
+            'projects_count' => count($projects),
+            'tasks_count' => count($tasks)
+        ];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+// 3.6 LIST ALL WORKSPACE TEMPLATES & BLUEPRINTS (DEV TEAM CATALOG)
+if ($action === 'templates' && $method === 'GET') {
+    try {
+        $stmt = $pdo->query("
+            SELECT t.*,
+                   (SELECT COUNT(*) FROM ventures WHERE name = t.title) as adoption_count,
+                   (SELECT COUNT(*) FROM workspace_purchases WHERE template_id = t.id OR template_slug = t.slug) as purchases_count
+            FROM workspace_templates t
+            ORDER BY t.id DESC
+        ");
+        $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $parsed = [];
+        foreach ($templates as $t) {
+            $execs = json_decode($t['executives_json'], true) ?: [];
+            $projs = json_decode($t['projects_json'], true) ?: [];
+            $tasks = json_decode($t['tasks_json'], true) ?: [];
+
+            $t['team_count'] = count($execs);
+            $t['projects_count'] = count($projs);
+            $t['tasks_count'] = count($tasks);
+            $parsed[] = $t;
+        }
+
+        sendJsonResponse(['success' => true, 'templates' => $parsed]);
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.7 GET TEMPLATE DETAILS (WITH ADOPTION USERS LIST)
+if ($action === 'template_details' && $method === 'GET') {
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid template ID.'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM workspace_templates WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $tpl = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$tpl) {
+            sendJsonResponse(['success' => false, 'error' => 'Template not found.'], 404);
+        }
+
+        $tpl['features'] = json_decode($tpl['features_json'], true) ?: [];
+        $tpl['executives'] = json_decode($tpl['executives_json'], true) ?: [];
+        $tpl['projects'] = json_decode($tpl['projects_json'], true) ?: [];
+        $tpl['tasks'] = json_decode($tpl['tasks_json'], true) ?: [];
+        $tpl['prompts'] = json_decode($tpl['prompts_json'], true) ?: [];
+
+        // Users who have this workspace active
+        $uStmt = $pdo->prepare("
+            SELECT v.id as venture_id, v.created_at, u.id as user_id, u.name as user_name, u.username, u.email, u.avatar_url
+            FROM ventures v
+            JOIN users u ON v.user_id = u.id
+            WHERE v.name = :title
+            ORDER BY v.id DESC
+        ");
+        $uStmt->execute([':title' => $tpl['title']]);
+        $adoptions = $uStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        sendJsonResponse([
+            'success' => true,
+            'template' => $tpl,
+            'adoptions' => $adoptions
+        ]);
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.8 UPLOAD / IMPORT WORKSPACE BLUEPRINT (JSON FILE OR PAYLOAD)
+if ($action === 'upload_blueprint' && $method === 'POST') {
+    $blueprintData = null;
+
+    // Check if JSON file was uploaded
+    if (!empty($_FILES['blueprint_file']['tmp_name'])) {
+        $rawFile = file_get_contents($_FILES['blueprint_file']['tmp_name']);
+        $blueprintData = json_decode($rawFile, true);
+        if (!$blueprintData) {
+            sendJsonResponse(['success' => false, 'error' => 'Uploaded file is not valid JSON.'], 400);
+        }
+    } elseif (!empty($input['blueprint_json'])) {
+        $blueprintData = is_array($input['blueprint_json']) ? $input['blueprint_json'] : json_decode($input['blueprint_json'], true);
+        if (!$blueprintData) {
+            sendJsonResponse(['success' => false, 'error' => 'Provided blueprint_json is not valid JSON.'], 400);
+        }
+    } else {
+        $blueprintData = $input;
+    }
+
+    $title = trim($blueprintData['title'] ?? '');
+    if (empty($title)) {
+        sendJsonResponse(['success' => false, 'error' => 'Blueprint must contain a title.'], 400);
+    }
+
+    $domain = trim($blueprintData['domain'] ?? 'General Operations');
+    $description = trim($blueprintData['description'] ?? '');
+    $icon = trim($blueprintData['icon'] ?? 'briefcase');
+    $color = trim($blueprintData['color'] ?? 'indigo');
+    $tier = trim($blueprintData['tier'] ?? 'free');
+    $price = (float)($blueprintData['price'] ?? 0.00);
+    $currency = trim($blueprintData['currency'] ?? 'USD');
+    $badge = trim($blueprintData['badge'] ?? 'DEV STARTER');
+    $isActive = isset($blueprintData['is_active']) ? (int)$blueprintData['is_active'] : 1;
+
+    // Generate or sanitize slug
+    $slug = trim($blueprintData['slug'] ?? '');
+    if (empty($slug)) {
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+        $slug = trim($slug, '-');
+    }
+
+    // Process nested arrays
+    $features = $blueprintData['features'] ?? $blueprintData['features_json'] ?? [];
+    if (is_string($features)) $features = json_decode($features, true) ?: [];
+
+    $executives = $blueprintData['executives'] ?? $blueprintData['executives_json'] ?? [];
+    if (is_string($executives)) $executives = json_decode($executives, true) ?: [];
+
+    $projects = $blueprintData['projects'] ?? $blueprintData['projects_json'] ?? [];
+    if (is_string($projects)) $projects = json_decode($projects, true) ?: [];
+
+    $tasks = $blueprintData['tasks'] ?? $blueprintData['tasks_json'] ?? [];
+    if (is_string($tasks)) $tasks = json_decode($tasks, true) ?: [];
+
+    $prompts = $blueprintData['prompts'] ?? $blueprintData['prompts_json'] ?? [];
+    if (is_string($prompts)) $prompts = json_decode($prompts, true) ?: [];
+
+    // If auto_generate_team is flagged and no executives provided, generate via Gemini
+    if (!empty($blueprintData['auto_generate_team']) && empty($executives)) {
+        $systemPrompt = "You are an elite corporate architect. The company launched '{$title}' ({$domain}): '{$description}'. Generate 4 specialized C-level AI executives in JSON array: name, title, department, personality, system_prompt, bio.";
+        $geminiRes = callGeminiApi([['role' => 'user', 'content' => "Generate 4 executives in JSON array."]], $systemPrompt, 'blueprint_gen');
+        if (!empty($geminiRes['candidates'][0]['content']['parts'][0]['text'])) {
+            $raw = preg_replace('/```(json)?/i', '', $geminiRes['candidates'][0]['content']['parts'][0]['text']);
+            $parsed = json_decode(trim($raw), true);
+            if (is_array($parsed)) $executives = $parsed;
+        }
+    }
+
+    $featuresJson = json_encode($features, JSON_UNESCAPED_UNICODE);
+    $executivesJson = json_encode($executives, JSON_UNESCAPED_UNICODE);
+    $projectsJson = json_encode($projects, JSON_UNESCAPED_UNICODE);
+    $tasksJson = json_encode($tasks, JSON_UNESCAPED_UNICODE);
+    $promptsJson = json_encode($prompts, JSON_UNESCAPED_UNICODE);
+
+    try {
+        // Check if existing template has same slug
+        $chk = $pdo->prepare("SELECT id FROM workspace_templates WHERE slug = :s");
+        $chk->execute([':s' => $slug]);
+        $existingId = $chk->fetchColumn();
+
+        if ($existingId) {
+            // Update existing template
+            $upd = $pdo->prepare("
+                UPDATE workspace_templates SET 
+                    title = :title, domain = :domain, description = :description, icon = :icon, color = :color,
+                    tier = :tier, price = :price, currency = :currency, badge = :badge,
+                    features_json = :features, executives_json = :executives, projects_json = :projects,
+                    tasks_json = :tasks, prompts_json = :prompts, is_active = :active
+                WHERE id = :id
+            ");
+            $upd->execute([
+                ':title' => $title,
+                ':domain' => $domain,
+                ':description' => $description,
+                ':icon' => $icon,
+                ':color' => $color,
+                ':tier' => $tier,
+                ':price' => $price,
+                ':currency' => $currency,
+                ':badge' => $badge,
+                ':features' => $featuresJson,
+                ':executives' => $executivesJson,
+                ':projects' => $projectsJson,
+                ':tasks' => $tasksJson,
+                ':prompts' => $promptsJson,
+                ':active' => $isActive,
+                ':id' => $existingId
+            ]);
+            $savedId = (int)$existingId;
+            $msg = "Workspace Blueprint '{$title}' updated successfully.";
+        } else {
+            // Insert new template
+            $ins = $pdo->prepare("
+                INSERT INTO workspace_templates 
+                (slug, title, domain, description, icon, color, tier, price, currency, badge, features_json, executives_json, projects_json, tasks_json, prompts_json, is_active)
+                VALUES (:slug, :title, :domain, :description, :icon, :color, :tier, :price, :currency, :badge, :features, :executives, :projects, :tasks, :prompts, :active)
+            ");
+            $ins->execute([
+                ':slug' => $slug,
+                ':title' => $title,
+                ':domain' => $domain,
+                ':description' => $description,
+                ':icon' => $icon,
+                ':color' => $color,
+                ':tier' => $tier,
+                ':price' => $price,
+                ':currency' => $currency,
+                ':badge' => $badge,
+                ':features' => $featuresJson,
+                ':executives' => $executivesJson,
+                ':projects' => $projectsJson,
+                ':tasks' => $tasksJson,
+                ':prompts' => $promptsJson,
+                ':active' => $isActive
+            ]);
+            $savedId = (int)$pdo->lastInsertId();
+            $msg = "Workspace Blueprint '{$title}' uploaded and published to catalog.";
+        }
+
+        sendJsonResponse([
+            'success' => true,
+            'message' => $msg,
+            'template_id' => $savedId,
+            'slug' => $slug,
+            'title' => $title,
+            'executives_count' => count($executives),
+            'projects_count' => count($projects),
+            'tasks_count' => count($tasks)
+        ], 201);
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.9 EXPORT WORKSPACE BLUEPRINT AS DOWNLOADABLE JSON FILE
+if ($action === 'export_template' && $method === 'GET') {
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid template ID.'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM workspace_templates WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $tpl = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$tpl) {
+            sendJsonResponse(['success' => false, 'error' => 'Template not found.'], 404);
+        }
+
+        $export = [
+            'schema' => 'ruxt.workspace.blueprint',
+            'version' => '1.0',
+            'exported_at' => date('c'),
+            'slug' => $tpl['slug'],
+            'title' => $tpl['title'],
+            'domain' => $tpl['domain'],
+            'description' => $tpl['description'],
+            'icon' => $tpl['icon'],
+            'color' => $tpl['color'],
+            'tier' => $tpl['tier'],
+            'price' => (float)$tpl['price'],
+            'currency' => $tpl['currency'],
+            'badge' => $tpl['badge'],
+            'features' => json_decode($tpl['features_json'], true) ?: [],
+            'executives' => json_decode($tpl['executives_json'], true) ?: [],
+            'projects' => json_decode($tpl['projects_json'], true) ?: [],
+            'tasks' => json_decode($tpl['tasks_json'], true) ?: [],
+            'prompts' => json_decode($tpl['prompts_json'], true) ?: []
+        ];
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="ruxt-blueprint-' . $tpl['slug'] . '.json"');
+        echo json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.10 TOGGLE TEMPLATE ACTIVE/DRAFT STATUS
+if ($action === 'toggle_template_status' && $method === 'POST') {
+    $id = (int)($input['id'] ?? $_POST['id'] ?? 0);
+    if ($id <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid template ID.'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE workspace_templates SET is_active = (1 - is_active) WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+
+        $chk = $pdo->prepare("SELECT is_active FROM workspace_templates WHERE id = :id");
+        $chk->execute([':id' => $id]);
+        $newStatus = (int)$chk->fetchColumn();
+
+        sendJsonResponse([
+            'success' => true,
+            'is_active' => $newStatus,
+            'message' => $newStatus === 1 ? 'Workspace Blueprint is now LIVE in the Store.' : 'Workspace Blueprint switched to DRAFT (Hidden from users).'
+        ]);
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.11 DELETE WORKSPACE TEMPLATE
+if ($action === 'delete_template' && $method === 'POST') {
+    $id = (int)($input['id'] ?? $_POST['id'] ?? 0);
+    if ($id <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid template ID.'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM workspace_templates WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+
+        sendJsonResponse([
+            'success' => true,
+            'message' => 'Workspace Blueprint removed from system catalog.'
+        ]);
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// 3.12 1-CLICK DEPLOY TEMPLATE TO USER
+if ($action === 'deploy_to_user' && $method === 'POST') {
+    $templateId = (int)($input['template_id'] ?? $_POST['template_id'] ?? 0);
+    $targetUserId = (int)($input['user_id'] ?? $_POST['user_id'] ?? 0);
+
+    if ($templateId <= 0 || $targetUserId <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Target User and Template ID are required.'], 400);
+    }
+
+    try {
+        $uChk = getUserById($targetUserId);
+        if (!$uChk) {
+            sendJsonResponse(['success' => false, 'error' => 'Target user does not exist.'], 404);
+        }
+
+        $tStmt = $pdo->prepare("SELECT * FROM workspace_templates WHERE id = :id");
+        $tStmt->execute([':id' => $templateId]);
+        $template = $tStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$template) {
+            sendJsonResponse(['success' => false, 'error' => 'Template blueprint not found.'], 404);
+        }
+
+        $result = adminDeployTemplateToUser($pdo, $targetUserId, $template);
+        if ($result['success']) {
+            sendJsonResponse([
+                'success' => true,
+                'message' => "Workspace '{$template['title']}' successfully deployed to {$uChk['name']}.",
+                'deployment' => $result
+            ]);
+        } else {
+            sendJsonResponse(['success' => false, 'error' => $result['error']], 500);
+        }
+    } catch (\Throwable $e) {
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// -------------------------------------------------------------
 // 4. SYSTEM & AI TOOLS MANAGEMENT
 // -------------------------------------------------------------
 
