@@ -558,7 +558,7 @@ if ($action === 'create_workspace' && $method === 'POST') {
             $template = $tplStmt->fetch();
 
             if ($template) {
-                require_once __DIR__ . '/workspace_store.php';
+                require_once __DIR__ . '/workspace_helper.php';
                 $newVenture = provisionWorkspaceFromTemplate($pdo, $targetUserId, $template, 'admin_provision', 0.00, 'ADMIN-' . uniqid());
                 sendJsonResponse([
                     'success' => true,

@@ -2,7 +2,7 @@
 // api/chat.php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/agent_tools.php';
-require_once __DIR__ . '/workspace_store.php';
+require_once __DIR__ . '/workspace_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJsonResponse(['error' => 'Method not allowed'], 405);
