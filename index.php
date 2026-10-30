@@ -289,10 +289,10 @@ $currentUser = getCurrentUser();
     <main class="flex-1 flex flex-col h-full bg-[#fcfaf5] relative min-w-0">
         
         <!-- Top Navigation Header (Matching RuXt Site Header) -->
-        <header class="h-14 border-b border-[#ddd8cc] flex items-center justify-between px-2 sm:px-4 md:px-5 glass-panel z-20 flex-shrink-0">
+        <header class="h-14 border-b border-[#ddd8cc] flex items-center justify-between px-3 sm:px-4 md:px-5 glass-panel z-20 flex-shrink-0 relative">
             
             <!-- Left: Toggle & Active Executive Banner -->
-            <div class="flex items-center space-x-1.5 sm:space-x-3 min-w-0">
+            <div class="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-shrink-0">
                 <button id="mobileMenuBtn" class="text-[#68716d] hover:text-[#173d34] p-1.5 sm:p-2 rounded-xl hover:bg-[#ede8dc] transition-colors flex-shrink-0 cursor-pointer" aria-label="Toggle Navigation Drawer">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
@@ -317,7 +317,7 @@ $currentUser = getCurrentUser();
             </div>
 
             <!-- Center: View Switcher (Desktop & Tablet RuXt Pill Toggle) -->
-            <div class="hidden md:flex items-center p-0.5 bg-[#ede8dc] border border-[#ddd8cc] rounded-full space-x-1">
+            <div class="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center p-0.5 bg-[#ede8dc] border border-[#ddd8cc] rounded-full space-x-1 shadow-xs">
                 <button id="topToggleChatBtn" type="button" class="px-3 sm:px-3.5 py-1 text-xs font-bold rounded-full text-[#173d34] bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex items-center space-x-1.5 transition-all">
                     <i data-lucide="message-square" class="w-3.5 h-3.5 text-[#173d34]"></i>
                     <span>Chat</span>
@@ -332,71 +332,32 @@ $currentUser = getCurrentUser();
                 </button>
             </div>
 
-            <!-- Right Controls: Voice Call, Language, Sound, Model -->
-            <div class="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+            <!-- Right Controls: Voice Call & User Profile Hub Dropdown -->
+            <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
                 
-                <!-- Live Voice Call Button (RuXt Pill CTA) -->
-                <button id="startVoiceCallBtn" type="button" class="px-2.5 sm:px-3.5 py-1.5 rounded-full bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-md shadow-[#173d34]/15 transition-all active:scale-95 flex-shrink-0" title="Start Live Voice Conversation">
+                <!-- Live Voice Call Button (Right aligned) -->
+                <button id="startVoiceCallBtn" type="button" class="px-3 sm:px-3.5 py-1.5 rounded-full bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-[#173d34]/15 transition-all active:scale-95 flex-shrink-0 cursor-pointer" title="Start Live Voice Conversation">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <i data-lucide="phone-call" class="w-3.5 h-3.5 text-[#fcfaf5]"></i>
                     <span class="font-bold hidden sm:inline">Voice Call</span>
                     <span class="font-bold sm:hidden text-[11px]">Call</span>
                 </button>
 
-                <!-- Voice Speech Audio Output Toggle -->
-                <button id="soundToggleBtn" class="p-1.5 sm:p-2 text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] rounded-full transition-colors flex-shrink-0" title="Voice Output Audio: OFF">
-                    <i id="soundToggleIcon" data-lucide="volume-x" class="w-4 h-4"></i>
-                </button>
-
-                <!-- Active Venture & Project Pills (Subtle) -->
-                <button id="headerVenturePill" type="button" class="hidden 2xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Venture">
-                    <span id="headerVentureDot" class="w-1.5 h-1.5 rounded-full bg-[#173d34]"></span>
-                    <span id="headerVentureName" class="truncate max-w-[100px] text-[11px] font-bold text-[#173d34]">Primary Workspace</span>
-                </button>
-
-                <button id="headerProjectPill" type="button" class="hidden 2xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Project">
-                    <i data-lucide="folder-kanban" class="w-3 h-3 text-[#799a87]"></i>
-                    <span id="headerProjectName" class="truncate max-w-[100px] text-[11px] font-bold text-[#3d4942]">All Projects</span>
-                </button>
-
-                <!-- Workspace Template Marketplace Header Button -->
-                <button id="headerStoreBtn" type="button" class="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-300 text-xs font-bold text-amber-900 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
-                    <span class="text-[11px]">Templates Store</span>
-                    <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200 text-amber-800">FREE & PRO</span>
-                </button>
-
-                <!-- AI Model Badge -->
-                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="currentModelBadge" class="hidden xl:inline-block text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#68716d] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm" title="Configure AI Model">
-                    gemini-3-flash-preview
-                </button>
-
-                <!-- Gemini API Connection Status Pill -->
-                <button type="button" id="headerGeminiStatusBadge" onclick="window.openGeminiWizard()" class="inline-flex items-center space-x-1.5 text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full transition-all shadow-sm cursor-pointer border bg-[#fef9c3] hover:bg-[#fef08a] text-[#854d0e] border-[#fde047]" title="Click to view Gemini AI Setup Guide">
-                    <span id="headerGeminiStatusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span id="headerGeminiStatusText">Connect Gemini Key</span>
-                </button>
-
-                <!-- Live Token Usage Header Pill -->
-                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="headerTokenBadge" class="hidden xl:inline-flex items-center space-x-1.5 text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm cursor-pointer" title="Click to view detailed Token Analytics in Settings">
-                    <i data-lucide="zap" class="w-3 h-3 text-[#b7843f]"></i>
-                    <span id="headerTokenCountText">0 Tokens</span>
-                </button>
-
-                <!-- Current User Pill & Profile Hub + Logout -->
-                <div class="flex items-center space-x-1 sm:space-x-1.5 pl-1.5 border-l border-[#ddd8cc]">
-                    <button type="button" onclick="window.openProfileModal()" class="flex items-center space-x-1.5 p-1 rounded-full hover:bg-[#ede8dc] transition-colors cursor-pointer group" title="Open Profile & Hub">
-                        <div class="w-7 h-7 rounded-full bg-[#173d34] text-[#fcfaf5] flex items-center justify-center font-bold text-[11px] shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform">
+                <!-- Current User Profile & Quick Hub Trigger Button -->
+                <div class="flex items-center pl-1 sm:pl-2 border-l border-[#ddd8cc]">
+                    <button type="button" onclick="window.openProfileModal()" class="flex items-center space-x-2 p-1 sm:p-1.5 rounded-2xl hover:bg-[#ede8dc] border border-transparent hover:border-[#ddd8cc] transition-all cursor-pointer group" title="Open Profile, Settings & Workspaces">
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#173d34] text-[#fcfaf5] flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform">
                             <?= htmlspecialchars(strtoupper(substr($currentUser['name'] ?? 'U', 0, 1))) ?>
                         </div>
-                        <span class="hidden md:inline text-xs font-bold text-[#202725] max-w-[90px] truncate"><?= htmlspecialchars($currentUser['name'] ?? 'User') ?></span>
+                        <div class="hidden sm:flex flex-col text-left leading-tight pr-1">
+                            <span class="text-xs font-bold text-[#202725] max-w-[100px] truncate"><?= htmlspecialchars($currentUser['name'] ?? 'User') ?></span>
+                            <span class="text-[10px] text-[#68716d] font-mono">Workspace Hub</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-[#68716d] group-hover:text-[#173d34] transition-colors"></i>
                     </button>
-                    <a href="logout.php" class="flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold text-[#be123c] hover:text-[#ffffff] bg-[#fff1f2] hover:bg-[#e11d48] border border-[#fecdd3] hover:border-[#e11d48] transition-all shadow-2xs cursor-pointer active:scale-95" title="Sign Out of RuXt">
-                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                        <span class="hidden sm:inline">Logout</span>
-                    </a>
                 </div>
             </div>
+        </header>
         </header>
 
         <!-- Dynamic Content Viewport -->
@@ -1039,6 +1000,65 @@ $currentUser = getCurrentUser();
                             <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                             <span>Sign Out</span>
                         </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Environment & Quick Controls Section (Moved from Topbar) -->
+            <div class="px-5 sm:px-6 pt-3 pb-1 bg-[#ffffff] flex-shrink-0">
+                <div class="p-3 bg-[#fcfaf5] border border-[#ddd8cc] rounded-2xl space-y-2.5">
+                    <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#68716d] font-mono">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="cpu" class="w-3.5 h-3.5 text-[#173d34]"></i>
+                            <span>System &amp; AI Controls</span>
+                        </span>
+                        <!-- Voice Speech Audio Output Toggle -->
+                        <button id="soundToggleBtn" type="button" class="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] rounded-lg transition-colors cursor-pointer border border-[#ddd8cc]/80 bg-white" title="Voice Output Audio: OFF">
+                            <i id="soundToggleIcon" data-lucide="volume-x" class="w-3.5 h-3.5"></i>
+                            <span class="text-[11px] font-semibold">Voice Audio</span>
+                        </button>
+                    </div>
+
+                    <!-- Row 1: AI Engine Model, Gemini Key Status, Token Analytics -->
+                    <div class="flex items-center flex-wrap gap-2">
+                        <!-- Gemini API Connection Status Pill -->
+                        <button type="button" id="headerGeminiStatusBadge" onclick="window.closeProfileModal(); window.openGeminiWizard();" class="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer border bg-[#fef9c3] hover:bg-[#fef08a] text-[#854d0e] border-[#fde047]" title="Click to view Gemini AI Setup Guide">
+                            <span id="headerGeminiStatusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span id="headerGeminiStatusText">Connect Gemini Key</span>
+                        </button>
+
+                        <!-- AI Model Badge -->
+                        <button onclick="window.closeProfileModal(); document.getElementById('settingsModal').classList.remove('hidden');" id="currentModelBadge" type="button" class="text-xs bg-[#ffffff] hover:bg-[#f5f2e9] text-[#68716d] border border-[#ddd8cc] px-2.5 py-1.5 rounded-xl font-mono transition-colors shadow-2xs cursor-pointer" title="Configure AI Model">
+                            gemini-3-flash-preview
+                        </button>
+
+                        <!-- Live Token Usage Header Pill -->
+                        <button onclick="window.closeProfileModal(); document.getElementById('settingsModal').classList.remove('hidden');" id="headerTokenBadge" type="button" class="inline-flex items-center space-x-1.5 text-xs bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] px-2.5 py-1.5 rounded-xl font-mono transition-colors shadow-2xs cursor-pointer" title="Click to view detailed Token Analytics in Settings">
+                            <i data-lucide="zap" class="w-3 h-3 text-[#b7843f]"></i>
+                            <span id="headerTokenCountText">0 Tokens</span>
+                        </button>
+                    </div>
+
+                    <!-- Row 2: Active Workspace, Project & Templates Store -->
+                    <div class="flex items-center flex-wrap gap-2 pt-2 border-t border-[#ddd8cc]/60">
+                        <!-- Active Venture Pill -->
+                        <button id="headerVenturePill" type="button" onclick="if(window.closeProfileModal) window.closeProfileModal(); if(window.openVentureModal) window.openVentureModal();" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-[#ffffff] hover:bg-[#ede8dc] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-2xs cursor-pointer" title="Active Workspace">
+                            <span id="headerVentureDot" class="w-2 h-2 rounded-full bg-[#173d34]"></span>
+                            <span id="headerVentureName" class="truncate max-w-[130px] text-xs font-bold text-[#173d34]">Primary Workspace</span>
+                        </button>
+
+                        <!-- Active Project Pill -->
+                        <button id="headerProjectPill" type="button" onclick="if(window.closeProfileModal) window.closeProfileModal();" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-[#ffffff] hover:bg-[#ede8dc] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-2xs cursor-pointer" title="Active Project">
+                            <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-[#799a87]"></i>
+                            <span id="headerProjectName" class="truncate max-w-[120px] text-xs font-bold text-[#3d4942]">All Projects</span>
+                        </button>
+
+                        <!-- Workspace Template Marketplace Button -->
+                        <button id="headerStoreBtn" type="button" onclick="if(window.closeProfileModal) window.closeProfileModal();" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs font-bold text-amber-900 transition-all shadow-2xs cursor-pointer ml-auto" title="Explore Predefined Workspaces & Templates">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <span class="text-xs">Templates Store</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200 text-amber-800">FREE &amp; PRO</span>
+                        </button>
                     </div>
                 </div>
             </div>
