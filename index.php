@@ -332,9 +332,8 @@ $currentUser = getCurrentUser();
                 </button>
             </div>
 
-            <!-- Right Controls: Voice Call & User Profile Hub Dropdown -->
-            <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-                
+            <!-- Right Controls: Voice Call Button Only -->
+            <div class="flex items-center space-x-2 flex-shrink-0">
                 <!-- Live Voice Call Button (Right aligned) -->
                 <button id="startVoiceCallBtn" type="button" class="px-3 sm:px-3.5 py-1.5 rounded-full bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-[#173d34]/15 transition-all active:scale-95 flex-shrink-0 cursor-pointer" title="Start Live Voice Conversation">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -342,22 +341,7 @@ $currentUser = getCurrentUser();
                     <span class="font-bold hidden sm:inline">Voice Call</span>
                     <span class="font-bold sm:hidden text-[11px]">Call</span>
                 </button>
-
-                <!-- Current User Profile & Quick Hub Trigger Button -->
-                <div class="flex items-center pl-1 sm:pl-2 border-l border-[#ddd8cc]">
-                    <button type="button" onclick="window.openProfileModal()" class="flex items-center space-x-2 p-1 sm:p-1.5 rounded-2xl hover:bg-[#ede8dc] border border-transparent hover:border-[#ddd8cc] transition-all cursor-pointer group" title="Open Profile, Settings & Workspaces">
-                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#173d34] text-[#fcfaf5] flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform">
-                            <?= htmlspecialchars(strtoupper(substr($currentUser['name'] ?? 'U', 0, 1))) ?>
-                        </div>
-                        <div class="hidden sm:flex flex-col text-left leading-tight pr-1">
-                            <span class="text-xs font-bold text-[#202725] max-w-[100px] truncate"><?= htmlspecialchars($currentUser['name'] ?? 'User') ?></span>
-                            <span class="text-[10px] text-[#68716d] font-mono">Workspace Hub</span>
-                        </div>
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-[#68716d] group-hover:text-[#173d34] transition-colors"></i>
-                    </button>
-                </div>
             </div>
-        </header>
         </header>
 
         <!-- Dynamic Content Viewport -->
