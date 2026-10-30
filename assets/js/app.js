@@ -1134,23 +1134,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const ruxt = state.executives.find(e => e.is_chief_of_staff == 1);
         if (navRuXtBtn && ruxt) {
             if (state.activeView === 'chat' && state.selectedExecutiveId == ruxt.id) {
-                navRuXtBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl bg-[#ffffff] border border-[#ddd8cc] text-left text-[#173d34] font-bold shadow-sm group';
+                navRuXtBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl bg-[#ffffff] border border-[#ddd8cc] text-left text-[#173d34] font-bold shadow-xs group cursor-pointer';
             } else {
-                navRuXtBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl bg-transparent border border-transparent text-left text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] group transition-all';
+                navRuXtBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl bg-transparent border border-transparent text-left text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] group transition-all cursor-pointer';
             }
         }
         if (navBoardroomBtn) {
             if (state.activeView === 'boardroom') {
-                navBoardroomBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold bg-[#ffffff] border border-[#ddd8cc] text-[#173d34] shadow-sm transition-all';
+                navBoardroomBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold bg-[#ffffff] border border-[#ddd8cc] text-[#173d34] shadow-xs transition-all cursor-pointer';
             } else {
-                navBoardroomBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all';
+                navBoardroomBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all cursor-pointer';
             }
         }
         if (navTasksBoardBtn) {
             if (state.activeView === 'tasks') {
-                navTasksBoardBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold bg-[#ffffff] border border-[#ddd8cc] text-[#173d34] shadow-sm transition-all';
+                navTasksBoardBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold bg-[#ffffff] border border-[#ddd8cc] text-[#173d34] shadow-xs transition-all cursor-pointer';
             } else {
-                navTasksBoardBtn.className = 'w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all';
+                navTasksBoardBtn.className = 'w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all cursor-pointer';
             }
         }
 

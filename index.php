@@ -107,24 +107,24 @@ $currentUser = getCurrentUser();
             </div>
 
             <!-- Workspace / Active Venture Pill Dropdown -->
-            <div class="relative mb-3">
+            <div class="relative mb-2.5">
                 <div class="flex items-center justify-between mb-1.5 px-0.5">
                     <span class="kicker flex items-center gap-1">
                         <i data-lucide="layers" class="w-3 h-3 text-[#173d34]"></i> Workspace
                     </span>
                     <div class="flex items-center space-x-1">
-                        <button id="openWorkspaceStoreBtn" type="button" class="text-amber-800 hover:text-amber-900 text-[10px] font-bold flex items-center gap-1 bg-amber-50 hover:bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
+                        <button id="openWorkspaceStoreBtn" type="button" class="text-amber-800 hover:text-amber-900 text-[10px] font-bold flex items-center gap-1 bg-amber-50 hover:bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300 transition-all shadow-2xs cursor-pointer" title="Explore Predefined Workspaces & Templates">
                             <i data-lucide="sparkles" class="w-2.5 h-2.5 text-amber-600"></i> Store
                         </button>
-                        <button id="openNewVentureBtn" type="button" class="text-[#173d34] hover:text-[#285c4e] text-[10px] font-bold flex items-center gap-0.5 bg-[#ffffff] hover:bg-[#fcfaf5] px-2 py-0.5 rounded-full border border-[#ddd8cc] transition-all shadow-sm" title="Create Custom Venture">
-                            <i data-lucide="plus" class="w-2.5 h-2.5"></i> New
+                        <button id="openNewVentureBtn" type="button" class="text-[#173d34] hover:text-[#285c4e] text-[10px] font-bold flex items-center gap-0.5 bg-[#ffffff] hover:bg-[#fcfaf5] px-1.5 py-0.5 rounded-md border border-[#ddd8cc] transition-all shadow-2xs cursor-pointer" title="Create Custom Workspace">
+                            <i data-lucide="plus" class="w-2.5 h-2.5"></i>
                         </button>
                     </div>
                 </div>
                 
-                <button id="ventureDropdownBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl bg-[#ffffff] hover:bg-[#fffefa] border border-[#ddd8cc] hover:border-[#173d34]/40 text-left transition-all shadow-sm">
+                <button id="ventureDropdownBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl bg-[#ffffff] hover:bg-[#fffefa] border border-[#ddd8cc] hover:border-[#173d34]/40 text-left transition-all shadow-2xs cursor-pointer group">
                     <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
-                        <div id="activeVentureIconContainer" class="w-7 h-7 rounded-lg bg-[#173d34]/10 text-[#173d34] flex items-center justify-center flex-shrink-0 border border-[#173d34]/20">
+                        <div id="activeVentureIconContainer" class="w-7 h-7 rounded-lg bg-[#173d34]/10 text-[#173d34] flex items-center justify-center flex-shrink-0 border border-[#173d34]/20 group-hover:bg-[#173d34] group-hover:text-white transition-colors">
                             <i id="activeVentureIcon" data-lucide="briefcase" class="w-4 h-4"></i>
                         </div>
                         <div class="min-w-0 flex-1">
@@ -141,14 +141,14 @@ $currentUser = getCurrentUser();
                         <!-- Populated dynamically -->
                     </div>
                     <div class="pt-1.5 border-t border-[#e8e3d9] space-y-1">
-                        <button id="btnOpenStoreDropdown" type="button" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold text-[#173d34] bg-[#173d34]/5 hover:bg-[#173d34]/10 transition-colors">
+                        <button id="btnOpenStoreDropdown" type="button" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold text-[#173d34] bg-[#173d34]/5 hover:bg-[#173d34]/10 transition-colors cursor-pointer">
                             <span class="flex items-center space-x-2">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
                                 <span>Browse Templates</span>
                             </span>
                             <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/20 text-amber-700">STORE</span>
                         </button>
-                        <button id="btnAddNewVentureDropdown" type="button" class="w-full flex items-center space-x-2 p-2 rounded-xl text-xs font-semibold text-[#173d34] hover:bg-[#f5f2e9] transition-colors">
+                        <button id="btnAddNewVentureDropdown" type="button" class="w-full flex items-center space-x-2 p-2 rounded-xl text-xs font-semibold text-[#173d34] hover:bg-[#f5f2e9] transition-colors cursor-pointer">
                             <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                             <span>+ Launch Custom Venture</span>
                         </button>
@@ -156,48 +156,33 @@ $currentUser = getCurrentUser();
                 </div>
             </div>
 
-            <!-- PRIMARY ACTION: New Chat Button (RuXt Signature Pill Button) -->
-            <button id="newConsultationBtn" class="w-full py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-full text-xs flex items-center justify-center space-x-2 transition-all duration-200 shadow-md shadow-[#173d34]/15 active:scale-[0.98]">
+            <!-- PRIMARY ACTION: New Chat Button -->
+            <button id="newConsultationBtn" type="button" class="w-full py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition-all duration-200 shadow-sm shadow-[#173d34]/15 active:scale-[0.98] cursor-pointer">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>New Chat</span>
             </button>
         </div>
 
         <!-- Navigation Tabs: Clean & Organized -->
-        <div class="flex-1 overflow-y-auto p-3 space-y-4">
+        <div class="flex-1 overflow-y-auto p-3 space-y-3.5">
             
-            <!-- Main View Navigation Section -->
+            <!-- 1. Executive Suite Section (Tools & Deliberations) -->
             <div class="space-y-1">
-                <div class="px-2 mb-1.5 flex items-center justify-between">
-                    <span class="kicker">Navigation</span>
+                <div class="px-2 mb-1 flex items-center justify-between">
+                    <span class="kicker">Executive Suite</span>
                 </div>
 
-                <!-- 1. Assistant Chat (RuXt) -->
-                <button id="navRuXtBtn" class="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#ffffff] border border-[#ddd8cc] text-left hover:border-[#173d34] transition-all text-[#173d34] shadow-sm group">
-                    <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
-                        <div class="relative flex-shrink-0">
-                            <img id="sidebarRuXtAvatar" src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80" alt="RuXt" class="w-7 h-7 rounded-full object-cover border border-[#173d34]/40 shadow-sm">
-                            <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#ffffff]"></span>
-                        </div>
-                        <div class="min-w-0">
-                            <h3 class="text-xs font-bold text-[#173d34] truncate">RuXt Assistant</h3>
-                            <p class="text-[10px] text-[#68716d] truncate">Private AI & Chief of Staff</p>
-                        </div>
-                    </div>
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#b7843f] flex-shrink-0"></i>
-                </button>
-
-                <!-- 2. Task & Sprint Board -->
-                <button id="navTasksBoardBtn" class="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all">
+                <!-- Task & Sprint Board -->
+                <button id="navTasksBoardBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all cursor-pointer">
                     <div class="flex items-center space-x-2.5">
                         <i data-lucide="kanban-square" class="w-4 h-4 text-[#173d34]"></i>
-                        <span>Tasks & Projects</span>
+                        <span>Tasks &amp; Projects</span>
                     </div>
                     <span id="navTasksCountBadge" class="text-[10px] bg-[#173d34]/10 text-[#173d34] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
                 </button>
 
-                <!-- 3. Executive Boardroom -->
-                <button id="navBoardroomBtn" class="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all">
+                <!-- Executive Boardroom -->
+                <button id="navBoardroomBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all cursor-pointer">
                     <div class="flex items-center space-x-2.5">
                         <i data-lucide="users-round" class="w-4 h-4 text-[#799a87]"></i>
                         <span>Executive Boardroom</span>
@@ -205,43 +190,65 @@ $currentUser = getCurrentUser();
                     <span class="text-[10px] bg-[#799a87]/20 text-[#285c4e] px-2 py-0.5 rounded-full font-mono font-bold">Live</span>
                 </button>
 
-                <!-- 4. Team War Room Discussions -->
-                <button id="navDiscussionsBtn" class="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all">
-                    <div class="flex items-center space-x-2.5">
-                        <i data-lucide="message-circle-code" class="w-4 h-4 text-[#b7843f]"></i>
-                        <span>War Room Deliberations</span>
-                    </div>
-                    <span id="navDiscussionsCountBadge" class="text-[10px] bg-[#b7843f]/15 text-[#9a6d32] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
-                </button>
-
-                <!-- Quick Convene Meeting Action -->
-                <button id="callMeetingBtn" class="w-full py-1.5 px-3 mt-1 rounded-lg text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] text-[11px] font-semibold flex items-center justify-center space-x-1.5 transition-colors border border-transparent hover:border-[#ddd8cc]">
-                    <i data-lucide="landmark" class="w-3.5 h-3.5 text-[#173d34]"></i>
-                    <span>+ Convene Strategy Meeting</span>
-                </button>
+                <!-- War Room Deliberations with Inline Strategy Meeting Trigger -->
+                <div class="flex items-center space-x-1">
+                    <button id="navDiscussionsBtn" type="button" class="flex-1 flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-[#3d4942] hover:bg-[#ede8dc] hover:text-[#173d34] transition-all cursor-pointer">
+                        <div class="flex items-center space-x-2.5">
+                            <i data-lucide="message-circle-code" class="w-4 h-4 text-[#b7843f]"></i>
+                            <span>War Room Deliberations</span>
+                        </div>
+                        <span id="navDiscussionsCountBadge" class="text-[10px] bg-[#b7843f]/15 text-[#9a6d32] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+                    </button>
+                    <button id="callMeetingBtn" type="button" class="p-2 text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] rounded-xl transition-colors cursor-pointer border border-transparent hover:border-[#ddd8cc]" title="Convene Strategy Meeting">
+                        <i data-lucide="plus" class="w-4 h-4 text-[#173d34]"></i>
+                    </button>
+                </div>
             </div>
 
-            <!-- AI Specialists Section (1-on-1 Access) -->
-            <div>
-                <div class="flex items-center justify-between px-2 mb-1.5">
+            <!-- 2. AI Specialist Team (RuXt Lead Pinned at Top) -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between px-2 mb-1">
                     <div class="flex items-center space-x-1.5 overflow-hidden">
                         <span class="kicker">Specialist Team</span>
-                        <span id="ventureBadgeInSidebar" class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20 truncate max-w-[100px]">Studio</span>
+                        <span id="ventureBadgeInSidebar" class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20 truncate max-w-[90px]">Studio</span>
                     </div>
-                    <button id="openHireModalBtn" class="text-[10px] text-[#173d34] hover:text-[#285c4e] font-bold flex items-center space-x-1">
+                    <button id="openHireModalBtn" type="button" class="text-[10px] text-[#173d34] hover:text-[#285c4e] font-bold flex items-center space-x-1 cursor-pointer" title="Recruit Specialist">
                         <i data-lucide="user-plus" class="w-3 h-3"></i>
                         <span>Hire</span>
                     </button>
                 </div>
-                <div class="space-y-1" id="executivesList">
-                    <!-- Populated dynamically via JS -->
+
+                <div class="space-y-1">
+                    <!-- RuXt Assistant (Pinned Lead Chief of Staff) -->
+                    <button id="navRuXtBtn" type="button" class="w-full flex items-center justify-between p-2 rounded-xl bg-[#ffffff] border border-[#ddd8cc] text-left hover:border-[#173d34] transition-all text-[#173d34] shadow-2xs group cursor-pointer">
+                        <div class="flex items-center space-x-2.5 overflow-hidden flex-1">
+                            <div class="relative flex-shrink-0">
+                                <img id="sidebarRuXtAvatar" src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80" alt="RuXt" class="w-7 h-7 rounded-full object-cover border border-[#173d34]/40 shadow-xs">
+                                <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#ffffff]"></span>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center space-x-1.5">
+                                    <h3 class="text-xs font-bold text-[#173d34] truncate">RuXt</h3>
+                                    <span class="text-[8.5px] px-1.5 py-0.2 rounded font-mono font-bold bg-[#173d34]/10 text-[#173d34]">Lead</span>
+                                </div>
+                                <p class="text-[10px] text-[#68716d] truncate">Chief of Staff &amp; Advisor</p>
+                            </div>
+                        </div>
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#b7843f] flex-shrink-0"></i>
+                    </button>
+
+                    <!-- Other Specialists (Populated dynamically via JS) -->
+                    <div class="space-y-1" id="executivesList">
+                        <!-- Populated dynamically via JS -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Recent Chat Conversations History -->
-            <div>
-                <div class="flex items-center justify-between px-2 mb-1.5">
+            <!-- 3. Recent Chat Conversations History (Spacious & Clean) -->
+            <div class="space-y-1 pt-1">
+                <div class="flex items-center justify-between px-2 mb-1">
                     <span class="kicker">Recent Chats</span>
+                    <span class="text-[10px] text-[#68716d] font-mono">History</span>
                 </div>
                 <div class="space-y-1" id="sessionsList">
                     <!-- Populated dynamically via JS -->
