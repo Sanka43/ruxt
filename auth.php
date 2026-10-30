@@ -357,6 +357,9 @@ function authenticateUser(string $identifier, string $password, bool $remember =
  * Retrieve Google OAuth Client ID from environment or database settings
  */
 function getGoogleClientId(): string {
+    if (defined('GOOGLE_CLIENT_ID') && !empty(GOOGLE_CLIENT_ID)) {
+        return trim((string)GOOGLE_CLIENT_ID);
+    }
     $envVal = getenv('GOOGLE_CLIENT_ID');
     if (!empty($envVal)) {
         return trim((string)$envVal);
@@ -374,6 +377,9 @@ function getGoogleClientId(): string {
  * Retrieve Google OAuth Client Secret from environment or database settings
  */
 function getGoogleClientSecret(): string {
+    if (defined('GOOGLE_CLIENT_SECRET') && !empty(GOOGLE_CLIENT_SECRET)) {
+        return trim((string)GOOGLE_CLIENT_SECRET);
+    }
     $envVal = getenv('GOOGLE_CLIENT_SECRET');
     if (!empty($envVal)) {
         return trim((string)$envVal);
@@ -409,7 +415,7 @@ function authenticateWithGoogle(string $idToken): array {
         curl_setopt($ch, CURLOPT_URL, $verifyUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 12);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Prevent Windows/XAMPP CA bundle issues
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);

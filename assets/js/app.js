@@ -1742,8 +1742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((!text && !hasAttachments) || state.isSending) return;
 
         if (!state.settings.has_api_key) {
-            openSettings();
-            alert('Please enter your Gemini API Key in Settings to start executive consultations.');
+            openGeminiWizard();
             return;
         }
 
@@ -4280,27 +4279,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     openaiKeyInput.placeholder = `Configured (${state.settings.masked_openai_key})`;
                 }
 
-                // Google OAuth Sign-In Status
-                const googleClientIdInput = document.getElementById('googleClientIdInput');
-                const googleAuthStatusBadge = document.getElementById('googleAuthStatusBadge');
-                if (googleClientIdInput) {
-                    googleClientIdInput.value = state.settings.google_client_id || '';
-                }
-                if (googleAuthStatusBadge) {
-                    if (state.settings.has_google_client_id) {
-                        googleAuthStatusBadge.className = 'text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-mono font-bold';
-                        googleAuthStatusBadge.textContent = 'Active & Ready';
-                    } else {
-                        googleAuthStatusBadge.className = 'text-[10px] bg-stone-100 text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full font-mono font-bold';
-                        googleAuthStatusBadge.textContent = 'Not Configured';
-                    }
-                }
+
 
                 if (sidebarCompanyName) {
                     sidebarCompanyName.textContent = state.settings.company_name || 'Enterprises';
                 }
                 if (state.settings.has_api_key) {
                     apiKeyInput.placeholder = `Configured (${state.settings.masked_api_key})`;
+                } else {
+                    apiKeyInput.placeholder = 'Enter or paste your Gemini API key (AIzaSy...)';
+                }
+
+                // Update Gemini Header Status Badge & Chat Notice Banner
+                const headerGeminiBadge = document.getElementById('headerGeminiStatusBadge');
+                const headerGeminiDot = document.getElementById('headerGeminiStatusDot');
+                const headerGeminiText = document.getElementById('headerGeminiStatusText');
+                const chatNoticeBanner = document.getElementById('chatApiKeyNoticeBanner');
+                const settingsKeySourceBadge = document.getElementById('settingsKeySourceBadge');
+
+                if (state.settings.has_api_key) {
+                    if (headerGeminiBadge) {
+                        headerGeminiBadge.className = 'inline-flex items-center space-x-1.5 text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full transition-all shadow-sm cursor-pointer border bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#065f46] border-[#a7f3d0]';
+                    }
+                    if (headerGeminiDot) {
+                        headerGeminiDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                    }
+                    if (headerGeminiText) {
+                        headerGeminiText.textContent = state.settings.key_source === 'personal' ? 'Gemini Key Active' : 'Gemini Connected';
+                    }
+                    if (chatNoticeBanner) {
+                        chatNoticeBanner.classList.add('hidden');
+                    }
+                    if (settingsKeySourceBadge) {
+                        if (state.settings.key_source === 'personal') {
+                            settingsKeySourceBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-100 text-emerald-800';
+                            settingsKeySourceBadge.textContent = 'Personal Key Active';
+                        } else if (state.settings.key_source === 'server_env') {
+                            settingsKeySourceBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-teal-100 text-teal-800';
+                            settingsKeySourceBadge.textContent = 'Server Free Tier';
+                        } else {
+                            settingsKeySourceBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-indigo-100 text-indigo-800';
+                            settingsKeySourceBadge.textContent = 'System Key Active';
+                        }
+                    }
+                } else {
+                    if (headerGeminiBadge) {
+                        headerGeminiBadge.className = 'inline-flex items-center space-x-1.5 text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full transition-all shadow-sm cursor-pointer border bg-[#fef9c3] hover:bg-[#fef08a] text-[#854d0e] border-[#fde047]';
+                    }
+                    if (headerGeminiDot) {
+                        headerGeminiDot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+                    }
+                    if (headerGeminiText) {
+                        headerGeminiText.textContent = 'Connect Gemini Key';
+                    }
+                    if (chatNoticeBanner) {
+                        chatNoticeBanner.classList.remove('hidden');
+                    }
+                    if (settingsKeySourceBadge) {
+                        settingsKeySourceBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-100 text-amber-800';
+                        settingsKeySourceBadge.textContent = 'Not Configured';
+                    }
                 }
                 const modelBadge = document.getElementById('currentModelBadge');
                 if (modelBadge) {
@@ -4454,10 +4492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (openaiKeyInput && openaiKeyInput.value.trim()) {
             payload.openai_api_key = openaiKeyInput.value.trim();
         }
-        const googleClientIdInput = document.getElementById('googleClientIdInput');
-        if (googleClientIdInput) {
-            payload.google_client_id = googleClientIdInput.value.trim();
-        }
+
 
         try {
             const res = await fetch('api/settings.php', {
@@ -4528,6 +4563,233 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.openProfileModal = openProfileModal;
     window.closeProfileModal = closeProfileModal;
+
+    // ============================================
+    // GEMINI SETUP WIZARD & VALIDATION LOGIC
+    // ============================================
+    let currentWizardStep = 1;
+
+    function openGeminiWizard() {
+        const wizardModal = document.getElementById('geminiSetupWizardModal');
+        if (!wizardModal) return;
+        closeProfileModal();
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal) settingsModal.classList.add('hidden');
+        
+        wizardModal.classList.remove('hidden');
+        goToWizardStep(currentWizardStep || 1);
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeGeminiWizard() {
+        const wizardModal = document.getElementById('geminiSetupWizardModal');
+        if (wizardModal) wizardModal.classList.add('hidden');
+    }
+
+    function goToWizardStep(step) {
+        currentWizardStep = step;
+        const s1 = document.getElementById('wizardStep1');
+        const s2 = document.getElementById('wizardStep2');
+        const s3 = document.getElementById('wizardStep3');
+        const ind1 = document.getElementById('wizardStepIndicator1');
+        const ind2 = document.getElementById('wizardStepIndicator2');
+        const ind3 = document.getElementById('wizardStepIndicator3');
+        const line1 = document.getElementById('wizardProgressLine1');
+        const line2 = document.getElementById('wizardProgressLine2');
+
+        if (s1) s1.classList.toggle('hidden', step !== 1);
+        if (s2) s2.classList.toggle('hidden', step !== 2);
+        if (s3) s3.classList.toggle('hidden', step !== 3);
+
+        if (step === 1) {
+            if (line1) line1.style.width = '0%';
+            if (line2) line2.style.width = '0%';
+            if (ind1) ind1.className = 'flex items-center space-x-1.5 font-bold text-[#173d34]';
+            if (ind2) ind2.className = 'flex items-center space-x-1.5 font-semibold text-[#68716d]';
+            if (ind3) ind3.className = 'flex items-center space-x-1.5 font-semibold text-[#68716d]';
+        } else if (step === 2) {
+            if (line1) line1.style.width = '100%';
+            if (line2) line2.style.width = '0%';
+            if (ind1) ind1.className = 'flex items-center space-x-1.5 font-bold text-emerald-700';
+            if (ind2) ind2.className = 'flex items-center space-x-1.5 font-bold text-[#173d34]';
+            if (ind3) ind3.className = 'flex items-center space-x-1.5 font-semibold text-[#68716d]';
+            const keyInput = document.getElementById('wizardApiKeyInput');
+            if (keyInput) setTimeout(() => keyInput.focus(), 100);
+        } else if (step === 3) {
+            if (line1) line1.style.width = '100%';
+            if (line2) line2.style.width = '100%';
+            if (ind1) ind1.className = 'flex items-center space-x-1.5 font-bold text-emerald-700';
+            if (ind2) ind2.className = 'flex items-center space-x-1.5 font-bold text-emerald-700';
+            if (ind3) ind3.className = 'flex items-center space-x-1.5 font-bold text-emerald-700';
+        }
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleWizardKeyVisibility() {
+        const input = document.getElementById('wizardApiKeyInput');
+        const icon = document.getElementById('wizardEyeIcon');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleApiKeyVisibility() {
+        const input = document.getElementById('apiKeyInput');
+        const icon = document.getElementById('apiKeyEyeIcon');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    async function verifyAndSaveWizardKey() {
+        const keyInput = document.getElementById('wizardApiKeyInput');
+        const modelSelect = document.getElementById('wizardModelSelect');
+        const verifyBtn = document.getElementById('wizardVerifyBtn');
+        const btnText = document.getElementById('wizardVerifyBtnText');
+        const errorBox = document.getElementById('wizardErrorBox');
+        const errorMsg = document.getElementById('wizardErrorMsg');
+
+        const key = keyInput ? keyInput.value.trim() : '';
+        const model = modelSelect ? modelSelect.value : 'gemini-3.1-flash-lite';
+
+        if (!key) {
+            if (errorBox && errorMsg) {
+                errorMsg.textContent = 'Please paste your Google Gemini API key first.';
+                errorBox.classList.remove('hidden');
+            }
+            if (keyInput) keyInput.focus();
+            return;
+        }
+
+        if (errorBox) errorBox.classList.add('hidden');
+        if (verifyBtn) verifyBtn.disabled = true;
+        if (btnText) btnText.textContent = 'Verifying with Google...';
+
+        try {
+            const res = await fetch('api/settings.php?action=test_key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gemini_api_key: key,
+                    model: model,
+                    save_on_success: 1
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                state.settings.has_api_key = true;
+                state.settings.model = data.model || model;
+                const successModelText = document.getElementById('wizardSuccessModelText');
+                if (successModelText) successModelText.textContent = data.model || model;
+
+                await loadSettings();
+                goToWizardStep(3);
+            } else {
+                if (errorBox && errorMsg) {
+                    errorMsg.textContent = data.error || 'Google rejected this key. Please double check that you copied the complete key from Google AI Studio.';
+                    errorBox.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            console.error('Wizard verification error:', err);
+            if (errorBox && errorMsg) {
+                errorMsg.textContent = 'Network or server communication error. Please try again.';
+                errorBox.classList.remove('hidden');
+            }
+        } finally {
+            if (verifyBtn) verifyBtn.disabled = false;
+            if (btnText) btnText.textContent = 'Test & Connect Key';
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    async function testCurrentSettingsApiKey() {
+        const input = document.getElementById('apiKeyInput');
+        const testBtn = document.getElementById('testApiKeyBtn');
+        const notice = document.getElementById('settingsKeyStatusNotice');
+        const modelSel = document.getElementById('modelSelect');
+
+        const key = input ? input.value.trim() : '';
+        const model = modelSel ? modelSel.value : (state.settings.model || 'gemini-3.1-flash-lite');
+
+        if (notice) {
+            notice.className = 'text-[11px] py-1.5 px-2.5 rounded-xl font-medium bg-amber-50 text-amber-800 border border-amber-200 flex items-center space-x-1.5';
+            notice.innerHTML = '<span>Testing connection with Google Gemini...</span>';
+            notice.classList.remove('hidden');
+        }
+
+        if (testBtn) testBtn.disabled = true;
+
+        try {
+            const res = await fetch('api/settings.php?action=test_key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gemini_api_key: key,
+                    model: model
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                if (notice) {
+                    notice.className = 'text-[11px] py-1.5 px-2.5 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center space-x-1.5';
+                    notice.innerHTML = `<span>✓ Valid & Operational (${data.model || model})</span>`;
+                    notice.classList.remove('hidden');
+                }
+            } else {
+                if (notice) {
+                    notice.className = 'text-[11px] py-1.5 px-2.5 rounded-xl font-medium bg-rose-50 text-rose-800 border border-rose-200 flex items-center space-x-1.5';
+                    notice.innerHTML = `<span>✕ ${data.error || 'Key validation failed.'}</span>`;
+                    notice.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            if (notice) {
+                notice.className = 'text-[11px] py-1.5 px-2.5 rounded-xl font-medium bg-rose-50 text-rose-800 border border-rose-200';
+                notice.textContent = 'Connection test failed: server communication error.';
+                notice.classList.remove('hidden');
+            }
+        } finally {
+            if (testBtn) testBtn.disabled = false;
+        }
+    }
+
+    function finishWizardAndChat() {
+        closeGeminiWizard();
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) chatInput.focus();
+
+        // Check if user still needs role onboarding, trigger it smoothly
+        if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
+            checkAndTriggerOnboarding(false);
+        }
+    }
+
+    window.openGeminiWizard = openGeminiWizard;
+    window.closeGeminiWizard = closeGeminiWizard;
+    window.goToWizardStep = goToWizardStep;
+    window.toggleWizardKeyVisibility = toggleWizardKeyVisibility;
+    window.toggleApiKeyVisibility = toggleApiKeyVisibility;
+    window.verifyAndSaveWizardKey = verifyAndSaveWizardKey;
+    window.testCurrentSettingsApiKey = testCurrentSettingsApiKey;
+    window.finishWizardAndChat = finishWizardAndChat;
 
     function switchProfileTab(tab) {
         const paneTools = document.getElementById('profileTabPaneTools');
@@ -5989,6 +6251,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global Escape key handler to close popups
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            const wizardModal = document.getElementById('geminiSetupWizardModal');
+            if (wizardModal && !wizardModal.classList.contains('hidden')) {
+                closeGeminiWizard();
+            }
             const profileModal = document.getElementById('profileModal');
             if (profileModal && !profileModal.classList.contains('hidden')) {
                 closeProfileModal();
@@ -6007,8 +6273,13 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadDiscussions();
             await loadNotes();
 
-            // Auto-trigger onboarding only if user needs role configuration (not completed or skipped)
-            if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
+            // Auto-trigger Gemini Setup Wizard if no API key is connected
+            if (!state.settings.has_api_key) {
+                setTimeout(() => {
+                    openGeminiWizard();
+                }, 400);
+            } else if (!state.user || !state.user.onboarding_completed || parseInt(state.user.onboarding_completed, 10) === 0) {
+                // Auto-trigger onboarding only if user needs role configuration (not completed or skipped)
                 checkAndTriggerOnboarding(false);
             }
         });

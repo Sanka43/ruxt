@@ -371,6 +371,12 @@ $currentUser = getCurrentUser();
                     gemini-3-flash-preview
                 </button>
 
+                <!-- Gemini API Connection Status Pill -->
+                <button type="button" id="headerGeminiStatusBadge" onclick="window.openGeminiWizard()" class="inline-flex items-center space-x-1.5 text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full transition-all shadow-sm cursor-pointer border bg-[#fef9c3] hover:bg-[#fef08a] text-[#854d0e] border-[#fde047]" title="Click to view Gemini AI Setup Guide">
+                    <span id="headerGeminiStatusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="headerGeminiStatusText">Connect Gemini Key</span>
+                </button>
+
                 <!-- Live Token Usage Header Pill -->
                 <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="headerTokenBadge" class="hidden xl:inline-flex items-center space-x-1.5 text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm cursor-pointer" title="Click to view detailed Token Analytics in Settings">
                     <i data-lucide="zap" class="w-3 h-3 text-[#b7843f]"></i>
@@ -686,6 +692,21 @@ $currentUser = getCurrentUser();
                     </div>
 
                     <div class="max-w-3xl mx-auto">
+                        <!-- API Key Setup Prompt Banner (Shown when no Gemini API key is configured) -->
+                        <div id="chatApiKeyNoticeBanner" class="hidden mb-2.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50/90 via-orange-50/90 to-amber-100/60 border border-amber-200/90 shadow-sm flex items-center justify-between text-xs text-amber-950 transition-all">
+                            <div class="flex items-center space-x-2.5 min-w-0 pr-2">
+                                <span class="w-7 h-7 rounded-full bg-amber-200/80 text-amber-900 flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-2xs">⚡</span>
+                                <div class="truncate">
+                                    <span class="font-bold text-amber-950">Gemini AI Not Connected:</span>
+                                    <span class="text-amber-800 ml-1 hidden sm:inline">Set up your free Google API key to enable executive chat.</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="window.openGeminiWizard()" class="px-3.5 py-1.5 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-xl text-[11px] transition-all flex items-center space-x-1.5 flex-shrink-0 shadow-sm shadow-[#173d34]/20 cursor-pointer active:scale-95">
+                                <span>Connect Free Key</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+
                         <!-- Attachment Preview Staging Tray (Appears when files are staged) -->
                         <div id="attachmentPreviewTray" class="hidden mb-2 p-2 bg-[#ffffff] border border-[#ddd8cc] rounded-2xl shadow-sm flex flex-wrap gap-2 items-center transition-all duration-200">
                             <!-- Injected dynamically: thumbnails, file badges & remove buttons -->
@@ -775,6 +796,190 @@ $currentUser = getCurrentUser();
     <!-- ============================================ -->
     <!-- MODALS: CLEAN, REFINED RUXT LIGHT DIALOGS   -->
     <!-- ============================================ -->
+
+    <!-- MODAL -1: INTERACTIVE GEMINI API SETUP WIZARD -->
+    <div id="geminiSetupWizardModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden transition-all">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-150">
+            
+            <!-- Wizard Header -->
+            <div class="relative bg-gradient-to-r from-[#173d34] via-[#1f4e43] to-[#285c4e] px-5 py-4 text-[#fcfaf5] flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-amber-300 shadow-xs flex-shrink-0">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm sm:text-base leading-tight">Connect Your Free Gemini AI</h3>
+                        <p class="text-[11px] text-white/80">Activate RuXt with Google's high-speed AI engine in 60s</p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeGeminiWizard()" class="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title="Close (Esc)">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Wizard Steps Progress Bar -->
+            <div class="bg-[#f5f2e9] border-b border-[#ddd8cc] px-5 py-2.5 flex items-center justify-between text-xs">
+                <div id="wizardStepIndicator1" class="flex items-center space-x-1.5 font-bold text-[#173d34]">
+                    <span class="w-5 h-5 rounded-full bg-[#173d34] text-white flex items-center justify-center text-[10px]">1</span>
+                    <span>Get Key</span>
+                </div>
+                <div class="flex-1 h-[2px] bg-[#ddd8cc] mx-2">
+                    <div id="wizardProgressLine1" class="h-full bg-[#173d34] w-0 transition-all duration-300"></div>
+                </div>
+                <div id="wizardStepIndicator2" class="flex items-center space-x-1.5 font-semibold text-[#68716d]">
+                    <span class="w-5 h-5 rounded-full bg-[#ddd8cc] text-[#202725] flex items-center justify-center text-[10px]">2</span>
+                    <span>Connect & Verify</span>
+                </div>
+                <div class="flex-1 h-[2px] bg-[#ddd8cc] mx-2">
+                    <div id="wizardProgressLine2" class="h-full bg-[#173d34] w-0 transition-all duration-300"></div>
+                </div>
+                <div id="wizardStepIndicator3" class="flex items-center space-x-1.5 font-semibold text-[#68716d]">
+                    <span class="w-5 h-5 rounded-full bg-[#ddd8cc] text-[#202725] flex items-center justify-center text-[10px]">3</span>
+                    <span>Ready</span>
+                </div>
+            </div>
+
+            <!-- Wizard Body -->
+            <div class="p-5 overflow-y-auto flex-1 space-y-4">
+                
+                <!-- STEP 1: GET FREE KEY FROM GOOGLE AI STUDIO -->
+                <div id="wizardStep1" class="space-y-4">
+                    <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start space-x-3">
+                        <div class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <p class="font-bold text-emerald-900">100% Free Forever · No Credit Card Required</p>
+                            <p class="text-emerald-800/90 leading-relaxed">
+                                Google provides free Gemini API access with 15 requests per minute, which is more than enough for daily consultations, projects, and sprint planning.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-[#173d34]">Simple 3-Step Guide:</h4>
+                        
+                        <div class="flex items-start space-x-3 p-2.5 rounded-xl bg-[#fcfaf5] border border-[#ddd8cc]">
+                            <span class="w-5 h-5 rounded-full bg-[#173d34]/10 text-[#173d34] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                            <div class="text-xs">
+                                <p class="font-semibold text-[#202725]">Open Google AI Studio</p>
+                                <p class="text-[#68716d]">Click the button below to open Google's official developer console in a new browser tab.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-2.5 rounded-xl bg-[#fcfaf5] border border-[#ddd8cc]">
+                            <span class="w-5 h-5 rounded-full bg-[#173d34]/10 text-[#173d34] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                            <div class="text-xs">
+                                <p class="font-semibold text-[#202725]">Sign in & Click "Create API Key"</p>
+                                <p class="text-[#68716d]">Sign in with your Google account and click the blue <strong>"Create API key"</strong> button.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-2.5 rounded-xl bg-[#fcfaf5] border border-[#ddd8cc]">
+                            <span class="w-5 h-5 rounded-full bg-[#173d34]/10 text-[#173d34] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                            <div class="text-xs">
+                                <p class="font-semibold text-[#202725]">Copy your Key & Come Back</p>
+                                <p class="text-[#68716d]">Copy the generated key (starts with <code class="px-1 py-0.5 bg-[#ede8dc] rounded text-[10px] font-mono">AIzaSy...</code>) and paste it into Step 2.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" onclick="window.goToWizardStep(2)" class="w-full sm:flex-1 py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-2xl text-xs flex items-center justify-center space-x-2 transition-all shadow-md shadow-[#173d34]/20 cursor-pointer">
+                            <span>Open Google AI Studio ↗</span>
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                        </a>
+                        <button type="button" onclick="window.goToWizardStep(2)" class="w-full sm:w-auto py-2.5 px-4 border border-[#ddd8cc] hover:bg-[#ede8dc] text-[#202725] font-semibold rounded-2xl text-xs transition-colors cursor-pointer">
+                            I already have a key
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: PASTE & VERIFY KEY -->
+                <div id="wizardStep2" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-[#202725] mb-1">Paste your Gemini API Key:</label>
+                        <div class="relative">
+                            <input type="password" id="wizardApiKeyInput" placeholder="AIzaSy..." class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2.5 text-xs text-[#202725] placeholder-[#9ca3af] focus:outline-none focus:border-[#173d34] select-text">
+                            <button type="button" onclick="window.toggleWizardKeyVisibility()" class="absolute right-2.5 top-2.5 text-[#68716d] hover:text-[#173d34]" title="Show / Hide">
+                                <i data-lucide="eye" id="wizardEyeIcon" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-[#202725] mb-1">Preferred AI Model:</label>
+                        <select id="wizardModelSelect" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs text-[#202725] focus:outline-none focus:border-[#173d34]">
+                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash Lite (Free & Ultra Fast · Recommended)</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Free & Highly Intelligent)</option>
+                            <option value="gemini-3.8-flash">Gemini 3.8 Flash (High Reasoning)</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Research & Complex Data)</option>
+                        </select>
+                        <p class="text-[10px] text-[#68716d] mt-1">Flash models run on Google's Free Tier with zero cost.</p>
+                    </div>
+
+                    <!-- Dynamic Error / Status Callout -->
+                    <div id="wizardErrorBox" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start space-x-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5"></i>
+                        <span id="wizardErrorMsg" class="leading-relaxed"></span>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-between gap-2">
+                        <button type="button" onclick="window.goToWizardStep(1)" class="py-2.5 px-3 text-[#68716d] hover:text-[#202725] text-xs font-semibold cursor-pointer">
+                            ← Back to Guide
+                        </button>
+                        <button type="button" id="wizardVerifyBtn" onclick="window.verifyAndSaveWizardKey()" class="flex-1 py-2.5 px-4 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-2xl text-xs flex items-center justify-center space-x-2 transition-all shadow-md shadow-[#173d34]/20 cursor-pointer">
+                            <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
+                            <span id="wizardVerifyBtnText">Test & Connect Key</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SUCCESS & LAUNCH -->
+                <div id="wizardStep3" class="space-y-4 py-3 text-center hidden">
+                    <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+                        <i data-lucide="check-circle-2" class="w-10 h-10"></i>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-base text-[#202725]">Gemini AI Successfully Connected! 🎉</h4>
+                        <p class="text-xs text-[#68716d] max-w-sm mx-auto leading-relaxed">
+                            Your Gemini API key is verified and saved to your profile. RuXt is now primed and ready for executive advisory, team leadership, and automated planning.
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-[#fcfaf5] border border-[#ddd8cc] max-w-xs mx-auto text-left text-xs space-y-1">
+                        <div class="flex items-center justify-between text-[#68716d]">
+                            <span>Active Engine:</span>
+                            <span id="wizardSuccessModelText" class="font-bold text-[#173d34]">gemini-3.1-flash-lite</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[#68716d]">
+                            <span>Status:</span>
+                            <span class="font-bold text-emerald-600 flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                Connected & Ready
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="button" onclick="window.finishWizardAndChat()" class="w-full py-3 px-6 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-[#173d34]/25 cursor-pointer">
+                            Start Chatting with RuXt →
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Wizard Footer (Skip option) -->
+            <div class="p-3 bg-[#f5f2e9] border-t border-[#ddd8cc] flex items-center justify-between text-[11px] text-[#68716d] flex-shrink-0">
+                <span>Need help? Free tier keys never expire.</span>
+                <button type="button" onclick="window.closeGeminiWizard()" class="text-[#68716d] hover:text-[#173d34] font-medium hover:underline cursor-pointer">
+                    Skip for now
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL 0: USER PROFILE & WORKSPACE HUB (REDESIGNED) -->
     <div id="profileModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#202725]/60 backdrop-blur-md hidden transition-all">
@@ -1266,9 +1471,37 @@ $currentUser = getCurrentUser();
             </div>
 
             <form id="settingsForm" class="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 bg-[#ffffff]">
-                <div>
-                    <label class="block text-xs font-semibold text-[#3d4942] mb-1">Gemini API Key</label>
-                    <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs text-[#202725] placeholder-[#9ca3af] focus:outline-none focus:border-[#173d34] select-text">
+                <!-- Gemini API Key Section (Enhanced with Live Validation & Direct Free Link) -->
+                <div class="p-3.5 bg-[#fcfaf5] border border-[#ddd8cc] rounded-2xl space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-[#202725] flex items-center space-x-1.5">
+                            <i data-lucide="key" class="w-3.5 h-3.5 text-[#173d34]"></i>
+                            <span>Gemini API Key</span>
+                            <span id="settingsKeySourceBadge" class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-[#ede8dc] text-[#68716d]">Checking...</span>
+                        </label>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[11px] text-[#173d34] hover:text-[#285c4e] font-bold flex items-center space-x-1 hover:underline cursor-pointer" title="Get a 100% Free Gemini API key from Google AI Studio">
+                            <span>Get Free Key</span>
+                            <i data-lucide="external-link" class="w-3 h-3"></i>
+                        </a>
+                    </div>
+                    <div class="relative flex items-center">
+                        <input type="password" id="apiKeyInput" placeholder="Enter or paste your Gemini API key (AIzaSy...)" class="w-full bg-[#ffffff] border border-[#ddd8cc] rounded-xl pl-3 pr-20 py-2 text-xs text-[#202725] placeholder-[#9ca3af] focus:outline-none focus:border-[#173d34] select-text">
+                        <div class="absolute right-1.5 flex items-center space-x-1">
+                            <button type="button" id="toggleApiKeyVisibilityBtn" onclick="window.toggleApiKeyVisibility()" class="p-1 text-[#68716d] hover:text-[#173d34] rounded-lg hover:bg-[#ede8dc] transition-colors" title="Show / Hide Key">
+                                <i data-lucide="eye" id="apiKeyEyeIcon" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button type="button" id="testApiKeyBtn" onclick="window.testCurrentSettingsApiKey()" class="px-2.5 py-1 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 cursor-pointer" title="Test if key works">
+                                <span>Test</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="settingsKeyStatusNotice" class="hidden text-[11px] py-1.5 px-2.5 rounded-xl font-medium"></div>
+                    <div class="flex items-center justify-between text-[11px] text-[#68716d]">
+                        <span>Free tier: 15 RPM · No card needed</span>
+                        <button type="button" onclick="document.getElementById('settingsModal').classList.add('hidden'); window.openGeminiWizard();" class="text-[#173d34] font-bold hover:underline cursor-pointer">
+                            Interactive Setup Wizard ↗
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
@@ -1486,32 +1719,7 @@ $currentUser = getCurrentUser();
                     </div>
                 </div>
 
-                <!-- Google OAuth Configuration Section -->
-                <div class="pt-3 border-t border-[#ddd8cc]">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-[#173d34] flex items-center space-x-1.5">
-                            <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                            </svg>
-                            <span>Google Sign-In OAuth</span>
-                        </span>
-                        <span id="googleAuthStatusBadge" class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200 font-mono font-bold">
-                            Checking...
-                        </span>
-                    </div>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="block text-[11px] font-medium text-[#3d4942] mb-1">Google OAuth Client ID</label>
-                            <input type="text" id="googleClientIdInput" placeholder="xxxx.apps.googleusercontent.com" class="w-full bg-[#fcfaf5] border border-[#ddd8cc] rounded-xl px-3 py-2 text-xs text-[#202725] placeholder-[#9ca3af] focus:outline-none focus:border-[#173d34] select-text font-mono text-[11px]">
-                        </div>
-                        <p class="text-[10px] text-[#68716d]">
-                            Enables 1-click "Sign in with Google" on the login screen. Obtain this from Google Cloud Console.
-                        </p>
-                    </div>
-                </div>
+
 
                 <div class="pt-2">
                     <button type="submit" class="w-full py-2.5 bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-[#173d34]/15">

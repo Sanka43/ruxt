@@ -628,6 +628,22 @@ try {
         }
     }
 
+    // Auto-migration: Ensure gemini_api_key and gemini_model columns exist on users table
+    if (!empty($usersColumns) && !in_array('gemini_api_key', $usersColumns)) {
+        try {
+            $currentDriver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($currentDriver === 'sqlite') {
+                $pdo->exec("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT NULL");
+                $pdo->exec("ALTER TABLE users ADD COLUMN gemini_model TEXT DEFAULT NULL");
+            } else {
+                $pdo->exec("ALTER TABLE `users` ADD COLUMN `gemini_api_key` VARCHAR(255) NULL DEFAULT NULL AFTER `specialized_role`");
+                $pdo->exec("ALTER TABLE `users` ADD COLUMN `gemini_model` VARCHAR(100) NULL DEFAULT NULL AFTER `gemini_api_key`");
+            }
+        } catch (\Throwable $e) {
+            error_log("Failed to add gemini_api_key column to users: " . $e->getMessage());
+        }
+    }
+
     // Seed default projects if empty
     $projCount = $pdo->query("SELECT COUNT(*) FROM `projects`")->fetchColumn();
     if ($projCount == 0) {
@@ -1642,12 +1658,57 @@ function resetTokenUsage() {
 function getUserById($id) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("SELECT id, username, email, name, avatar_url, role, remember_token, job_field, specialized_role, onboarding_completed, onboarding_data, created_at, last_login FROM `users` WHERE id = :id LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, username, email, name, avatar_url, role, remember_token, job_field, specialized_role, gemini_api_key, gemini_model, onboarding_completed, onboarding_data, created_at, last_login FROM `users` WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => (int)$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (\Throwable $e) {
         error_log("getUserById error: " . $e->getMessage());
         return null;
+    }
+}
+
+function getUserGeminiKey($userId) {
+    global $pdo;
+    try {
+        if (empty($userId)) return null;
+        $stmt = $pdo->prepare("SELECT gemini_api_key FROM `users` WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => (int)$userId]);
+        $res = $stmt->fetchColumn();
+        return !empty($res) ? trim((string)$res) : null;
+    } catch (\Throwable $e) {
+        return null;
+    }
+}
+
+function getUserGeminiModel($userId) {
+    global $pdo;
+    try {
+        if (empty($userId)) return null;
+        $stmt = $pdo->prepare("SELECT gemini_model FROM `users` WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => (int)$userId]);
+        $res = $stmt->fetchColumn();
+        return !empty($res) ? trim((string)$res) : null;
+    } catch (\Throwable $e) {
+        return null;
+    }
+}
+
+function setUserGeminiKey($userId, $key, $model = null) {
+    global $pdo;
+    try {
+        if (empty($userId)) return false;
+        $cleanKey = trim((string)$key);
+        if ($model !== null) {
+            $cleanModel = trim((string)$model);
+            $stmt = $pdo->prepare("UPDATE `users` SET gemini_api_key = :k, gemini_model = :m WHERE id = :id");
+            return $stmt->execute([':k' => $cleanKey, ':m' => $cleanModel, ':id' => (int)$userId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE `users` SET gemini_api_key = :k WHERE id = :id");
+            return $stmt->execute([':k' => $cleanKey, ':id' => (int)$userId]);
+        }
+    } catch (\Throwable $e) {
+        error_log("setUserGeminiKey error: " . $e->getMessage());
+        return false;
     }
 }
 
@@ -1668,7 +1729,7 @@ function getUserByRememberToken($token) {
     global $pdo;
     try {
         if (empty($token)) return null;
-        $stmt = $pdo->prepare("SELECT id, username, email, name, avatar_url, role, remember_token, job_field, specialized_role, onboarding_completed, onboarding_data, created_at, last_login FROM `users` WHERE remember_token = :t LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, username, email, name, avatar_url, role, remember_token, job_field, specialized_role, gemini_api_key, gemini_model, onboarding_completed, onboarding_data, created_at, last_login FROM `users` WHERE remember_token = :t LIMIT 1");
         $stmt->execute([':t' => (string)$token]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (\Throwable $e) {

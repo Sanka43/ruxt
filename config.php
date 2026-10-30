@@ -14,14 +14,60 @@ function sendJsonResponse($data, $statusCode = 200) {
     exit;
 }
 
+/**
+ * Retrieve the effective Gemini API key using priority resolution:
+ * 1. Logged-in user's personal key (users.gemini_api_key)
+ * 2. System-wide setting key (settings.gemini_api_key)
+ * 3. Server environment variable (.env GEMINI_API_KEY)
+ */
+function getEffectiveGeminiApiKey($userId = null) {
+    if ($userId === null && function_exists('getCurrentUserId')) {
+        $userId = getCurrentUserId();
+    }
+    if (!empty($userId) && function_exists('getUserGeminiKey')) {
+        $userKey = getUserGeminiKey($userId);
+        if (!empty($userKey)) {
+            return $userKey;
+        }
+    }
+    $dbKey = getSetting('gemini_api_key');
+    if (!empty($dbKey)) {
+        return trim($dbKey);
+    }
+    $envKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? null);
+    if (!empty($envKey)) {
+        return trim($envKey);
+    }
+    return null;
+}
+
+/**
+ * Retrieve the effective Gemini model preference:
+ * 1. User's personal preferred model
+ * 2. System-wide setting model
+ * 3. Default 'gemini-3.1-flash-lite'
+ */
+function getEffectiveGeminiModel($userId = null) {
+    if ($userId === null && function_exists('getCurrentUserId')) {
+        $userId = getCurrentUserId();
+    }
+    if (!empty($userId) && function_exists('getUserGeminiModel')) {
+        $userModel = getUserGeminiModel($userId);
+        if (!empty($userModel)) {
+            return $userModel;
+        }
+    }
+    return getSetting('model', 'gemini-3.1-flash-lite');
+}
+
 // Function to call Gemini API with smart fallback
-function callGeminiApi($messages, $systemInstruction = null, $feature = 'chat') {
-    $apiKey = getSetting('gemini_api_key');
+function callGeminiApi($messages, $systemInstruction = null, $feature = 'chat', $overrideApiKey = null, $overrideModel = null) {
+    $apiKey = !empty($overrideApiKey) ? trim($overrideApiKey) : getEffectiveGeminiApiKey();
     if (empty($apiKey)) {
-        return ['error' => 'Gemini API Key is not configured. Please add your API key in Settings.'];
+        return ['error' => 'Gemini API Key is not configured. Please connect your Gemini API key.'];
     }
 
-    $preferredModel = getSetting('model', 'gemini-3.1-flash-lite');
+    $preferredModel = !empty($overrideModel) ? trim($overrideModel) : getEffectiveGeminiModel();
 
     // List of active candidate models in priority order with resilient fallback
     $candidateModels = array_filter(array_unique([

@@ -49,11 +49,13 @@ if ($method === 'POST' && ($action === 'login' || empty($action) && isset($input
             $redirect = filter_var($_GET['redirect'], FILTER_SANITIZE_URL);
         }
         $needsOnboarding = empty($result['user']['onboarding_completed']) || intval($result['user']['onboarding_completed']) === 0;
+        $hasGemini = !empty(getEffectiveGeminiApiKey($result['user']['id']));
         sendJsonResponse([
             'success' => true,
             'message' => $result['message'],
             'user' => $result['user'],
             'needs_onboarding' => $needsOnboarding,
+            'has_gemini_key' => $hasGemini,
             'redirect' => $redirect
         ]);
     } else {
@@ -82,11 +84,13 @@ if ($method === 'POST' && ($action === 'google_login' || $action === 'google')) 
             $redirect = filter_var($_GET['redirect'], FILTER_SANITIZE_URL);
         }
         $needsOnboarding = empty($result['user']['onboarding_completed']) || intval($result['user']['onboarding_completed']) === 0;
+        $hasGemini = !empty(getEffectiveGeminiApiKey($result['user']['id']));
         sendJsonResponse([
             'success' => true,
             'message' => $result['message'],
             'user' => $result['user'],
             'needs_onboarding' => $needsOnboarding,
+            'has_gemini_key' => $hasGemini,
             'redirect' => $redirect
         ]);
     } else {
@@ -111,11 +115,13 @@ if ($method === 'POST' && $action === 'register') {
         if (!empty($_GET['redirect'])) {
             $redirect = filter_var($_GET['redirect'], FILTER_SANITIZE_URL);
         }
+        $hasGemini = !empty(getEffectiveGeminiApiKey($result['user']['id']));
         sendJsonResponse([
             'success' => true,
             'message' => $result['message'],
             'user' => $result['user'],
             'needs_onboarding' => true,
+            'has_gemini_key' => $hasGemini,
             'redirect' => $redirect
         ]);
     } else {
