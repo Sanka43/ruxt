@@ -187,16 +187,17 @@ $currentUser = requireAdmin();
             </div>
 
             <!-- Dynamic Header Actions -->
-            <div class="flex items-center space-x-2" id="headerActionButtons">
-                <button onclick="refreshCurrentView()" class="px-3 py-1.5 text-xs font-semibold text-[#68716d] hover:text-[#173d34] bg-[#f5f2e9] hover:bg-[#ede8dc] border border-[#ddd8cc] rounded-xl flex items-center space-x-1.5 transition-all shadow-sm">
+            <div class="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0" id="headerActionButtons">
+                <button onclick="refreshCurrentView()" class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#68716d] hover:text-[#173d34] bg-[#f5f2e9] hover:bg-[#ede8dc] border border-[#ddd8cc] rounded-xl flex items-center space-x-1.5 transition-all shadow-sm">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">Refresh</span>
                 </button>
-                <button onclick="openNewWorkspaceModal()" class="px-3.5 py-1.5 text-xs font-bold text-[#fcfaf5] bg-[#173d34] hover:bg-[#285c4e] rounded-xl flex items-center space-x-1.5 transition-all shadow-sm">
+                <button onclick="openNewWorkspaceModal()" class="px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-[#fcfaf5] bg-[#173d34] hover:bg-[#285c4e] rounded-xl flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>New Workspace</span>
+                    <span class="hidden sm:inline">New Workspace</span>
+                    <span class="sm:hidden">New</span>
                 </button>
-                <button onclick="openNewUserModal()" class="px-3.5 py-1.5 text-xs font-bold text-[#173d34] bg-white hover:bg-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] rounded-xl flex items-center space-x-1.5 transition-all shadow-sm">
+                <button onclick="openNewUserModal()" class="px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-[#173d34] bg-white hover:bg-[#fcfaf5] border border-[#ddd8cc] hover:border-[#173d34] rounded-xl flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm">
                     <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">Add User</span>
                 </button>
@@ -211,7 +212,7 @@ $currentUser = requireAdmin();
             <!-- ======================================================== -->
             <section id="view-overview" class="space-y-6">
                 <!-- 4 Top KPI Cards -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <!-- KPI 1: Total Users -->
                     <div class="p-4 rounded-2xl bg-[#ffffff] border border-[#ddd8cc] shadow-sm relative overflow-hidden">
                         <div class="flex items-center justify-between mb-2">

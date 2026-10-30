@@ -88,7 +88,7 @@ $hasGoogleAuth = !empty($googleClientId);
         }
     </style>
 </head>
-<body class="text-[#202725] flex flex-col justify-between p-4 sm:p-6 font-sans antialiased">
+<body class="text-[#202725] flex flex-col justify-between p-3 sm:p-6 font-sans antialiased">
 
     <!-- Top Minimal Brand Bar -->
     <header class="w-full max-w-5xl mx-auto flex items-center justify-between py-2 flex-shrink-0">
@@ -138,7 +138,7 @@ $hasGoogleAuth = !empty($googleClientId);
         <?php endif; ?>
 
         <!-- Auth Card -->
-        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div class="bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden">
             
             <!-- Card Header -->
             <div class="text-center mb-6">

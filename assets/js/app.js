@@ -2416,7 +2416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const bubble = `
-            <div class="max-w-[85%] md:max-w-[75%] rounded-2xl p-4 ${isUser ? 'user-bubble' : 'assistant-bubble prose-custom'}">
+            <div class="max-w-[92%] sm:max-w-[85%] md:max-w-[75%] rounded-2xl p-3 sm:p-4 ${isUser ? 'user-bubble' : 'assistant-bubble prose-custom'}">
                 ${projectBadge}
                 ${attachmentsHtml}
                 ${parsedContent ? `<div class="message-body">${parsedContent}</div>` : ''}
@@ -4824,12 +4824,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openMobileSidebar() {
+        if (!sidebar) return;
         sidebar.classList.remove('-translate-x-full');
-        mobileOverlay.classList.remove('hidden');
+        sidebar.classList.remove('md:hidden');
+        if (mobileOverlay && window.innerWidth < 768) mobileOverlay.classList.remove('hidden');
     }
     function closeMobileSidebar() {
+        if (!sidebar) return;
         sidebar.classList.add('-translate-x-full');
-        mobileOverlay.classList.add('hidden');
+        if (mobileOverlay) mobileOverlay.classList.add('hidden');
+    }
+    function toggleSidebar() {
+        if (!sidebar) return;
+        if (window.innerWidth < 768) {
+            if (sidebar.classList.contains('-translate-x-full')) {
+                openMobileSidebar();
+            } else {
+                closeMobileSidebar();
+            }
+        } else {
+            sidebar.classList.toggle('md:hidden');
+        }
     }
 
     function showToastNotification(msg, type = 'success', title = null) {
@@ -5921,9 +5936,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshTokenStatsBtn = document.getElementById('refreshTokenStatsBtn');
     if (refreshTokenStatsBtn) refreshTokenStatsBtn.addEventListener('click', refreshTokenStats);
 
-    mobileMenuBtn.addEventListener('click', openMobileSidebar);
-    closeSidebarBtn.addEventListener('click', closeMobileSidebar);
-    mobileOverlay.addEventListener('click', closeMobileSidebar);
+    if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleSidebar);
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+    if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileSidebar);
 
     // Mobile Bottom Navigation Bar Listeners
     const bottomNavChatBtn = document.getElementById('bottomNavChatBtn');
@@ -5938,12 +5953,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bottomNavDiscussionsBtn) bottomNavDiscussionsBtn.addEventListener('click', openDiscussionsListModal);
     if (bottomNavMenuBtn) bottomNavMenuBtn.addEventListener('click', openMobileSidebar);
 
-    // Mobile virtual keyboard handling (hide bottom navigation while typing for maximum chat area)
+    // Mobile virtual keyboard handling (hide bottom navigation while typing for maximum chat area and auto-scroll)
     const mobileBottomNav = document.getElementById('mobileBottomNav');
     if (chatInput && mobileBottomNav) {
         chatInput.addEventListener('focus', () => {
             if (window.innerWidth < 768) {
                 mobileBottomNav.classList.add('hidden');
+                setTimeout(() => {
+                    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 280);
             }
         });
         chatInput.addEventListener('blur', () => {

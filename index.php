@@ -289,11 +289,11 @@ $currentUser = getCurrentUser();
     <main class="flex-1 flex flex-col h-full bg-[#fcfaf5] relative min-w-0">
         
         <!-- Top Navigation Header (Matching RuXt Site Header) -->
-        <header class="h-14 border-b border-[#ddd8cc] flex items-center justify-between px-2.5 sm:px-4 md:px-5 glass-panel z-20 flex-shrink-0">
+        <header class="h-14 border-b border-[#ddd8cc] flex items-center justify-between px-2 sm:px-4 md:px-5 glass-panel z-20 flex-shrink-0">
             
             <!-- Left: Toggle & Active Executive Banner -->
-            <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                <button id="mobileMenuBtn" class="md:hidden text-[#68716d] hover:text-[#173d34] p-2 rounded-xl hover:bg-[#ede8dc] transition-colors flex-shrink-0" aria-label="Open Navigation Drawer">
+            <div class="flex items-center space-x-1.5 sm:space-x-3 min-w-0">
+                <button id="mobileMenuBtn" class="text-[#68716d] hover:text-[#173d34] p-1.5 sm:p-2 rounded-xl hover:bg-[#ede8dc] transition-colors flex-shrink-0 cursor-pointer" aria-label="Toggle Navigation Drawer">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
 
@@ -305,7 +305,7 @@ $currentUser = getCurrentUser();
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center space-x-1.5">
-                            <h2 id="currentChatTitle" class="text-xs sm:text-sm font-bold text-[#202725] truncate max-w-[100px] sm:max-w-[160px] md:max-w-none">RuXt</h2>
+                            <h2 id="currentChatTitle" class="text-xs sm:text-sm font-bold text-[#202725] truncate max-w-[80px] xs:max-w-[125px] sm:max-w-[160px] md:max-w-none">RuXt</h2>
                             <span class="hidden sm:inline-flex text-[9px] px-1.5 py-0.2 rounded-full bg-[#173d34]/10 text-[#173d34] border border-[#173d34]/20 font-semibold items-center space-x-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 <span>Online</span>
@@ -316,17 +316,17 @@ $currentUser = getCurrentUser();
                 </div>
             </div>
 
-            <!-- Center: View Switcher (Desktop RuXt Pill Toggle) -->
-            <div class="hidden lg:flex items-center p-0.5 bg-[#ede8dc] border border-[#ddd8cc] rounded-full space-x-1">
-                <button id="topToggleChatBtn" type="button" class="px-3.5 py-1 text-xs font-bold rounded-full text-[#173d34] bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex items-center space-x-1.5 transition-all">
+            <!-- Center: View Switcher (Desktop & Tablet RuXt Pill Toggle) -->
+            <div class="hidden md:flex items-center p-0.5 bg-[#ede8dc] border border-[#ddd8cc] rounded-full space-x-1">
+                <button id="topToggleChatBtn" type="button" class="px-3 sm:px-3.5 py-1 text-xs font-bold rounded-full text-[#173d34] bg-[#ffffff] border border-[#ddd8cc] shadow-sm flex items-center space-x-1.5 transition-all">
                     <i data-lucide="message-square" class="w-3.5 h-3.5 text-[#173d34]"></i>
                     <span>Chat</span>
                 </button>
-                <button id="topToggleTasksBtn" type="button" class="px-3.5 py-1 text-xs font-semibold rounded-full text-[#68716d] hover:text-[#173d34] flex items-center space-x-1.5 transition-all">
+                <button id="topToggleTasksBtn" type="button" class="px-3 sm:px-3.5 py-1 text-xs font-semibold rounded-full text-[#68716d] hover:text-[#173d34] flex items-center space-x-1.5 transition-all">
                     <i data-lucide="kanban-square" class="w-3.5 h-3.5 text-[#799a87]"></i>
                     <span>Tasks</span>
                 </button>
-                <button id="topToggleBoardroomBtn" type="button" class="px-3.5 py-1 text-xs font-semibold rounded-full text-[#68716d] hover:text-[#173d34] flex items-center space-x-1.5 transition-all">
+                <button id="topToggleBoardroomBtn" type="button" class="px-3 sm:px-3.5 py-1 text-xs font-semibold rounded-full text-[#68716d] hover:text-[#173d34] flex items-center space-x-1.5 transition-all">
                     <i data-lucide="users-round" class="w-3.5 h-3.5 text-[#b7843f]"></i>
                     <span>Boardroom</span>
                 </button>
@@ -336,7 +336,7 @@ $currentUser = getCurrentUser();
             <div class="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
                 
                 <!-- Live Voice Call Button (RuXt Pill CTA) -->
-                <button id="startVoiceCallBtn" type="button" class="px-3 sm:px-3.5 py-1.5 rounded-full bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-md shadow-[#173d34]/15 transition-all active:scale-95" title="Start Live Voice Conversation">
+                <button id="startVoiceCallBtn" type="button" class="px-2.5 sm:px-3.5 py-1.5 rounded-full bg-[#173d34] hover:bg-[#285c4e] text-[#fcfaf5] font-bold text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-md shadow-[#173d34]/15 transition-all active:scale-95 flex-shrink-0" title="Start Live Voice Conversation">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <i data-lucide="phone-call" class="w-3.5 h-3.5 text-[#fcfaf5]"></i>
                     <span class="font-bold hidden sm:inline">Voice Call</span>
@@ -344,35 +344,35 @@ $currentUser = getCurrentUser();
                 </button>
 
                 <!-- Voice Speech Audio Output Toggle -->
-                <button id="soundToggleBtn" class="p-1.5 sm:p-2 text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] rounded-full transition-colors" title="Voice Output Audio: OFF">
+                <button id="soundToggleBtn" class="p-1.5 sm:p-2 text-[#68716d] hover:text-[#173d34] hover:bg-[#ede8dc] rounded-full transition-colors flex-shrink-0" title="Voice Output Audio: OFF">
                     <i id="soundToggleIcon" data-lucide="volume-x" class="w-4 h-4"></i>
                 </button>
 
                 <!-- Active Venture & Project Pills (Subtle) -->
-                <button id="headerVenturePill" type="button" class="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Venture">
+                <button id="headerVenturePill" type="button" class="hidden 2xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Venture">
                     <span id="headerVentureDot" class="w-1.5 h-1.5 rounded-full bg-[#173d34]"></span>
                     <span id="headerVentureName" class="truncate max-w-[100px] text-[11px] font-bold text-[#173d34]">Primary Workspace</span>
                 </button>
 
-                <button id="headerProjectPill" type="button" class="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Project">
+                <button id="headerProjectPill" type="button" class="hidden 2xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#ffffff] border border-[#ddd8cc] text-xs font-medium text-[#202725] shadow-sm" title="Active Project">
                     <i data-lucide="folder-kanban" class="w-3 h-3 text-[#799a87]"></i>
                     <span id="headerProjectName" class="truncate max-w-[100px] text-[11px] font-bold text-[#3d4942]">All Projects</span>
                 </button>
 
                 <!-- Workspace Template Marketplace Header Button -->
-                <button id="headerStoreBtn" type="button" class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-300 text-xs font-bold text-amber-900 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
+                <button id="headerStoreBtn" type="button" class="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100/80 border border-amber-300 text-xs font-bold text-amber-900 transition-all shadow-sm" title="Explore Predefined Workspaces & Templates">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
                     <span class="text-[11px]">Templates Store</span>
                     <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200 text-amber-800">FREE & PRO</span>
                 </button>
 
                 <!-- AI Model Badge -->
-                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="currentModelBadge" class="hidden sm:inline-block text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#68716d] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm" title="Configure AI Model">
+                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="currentModelBadge" class="hidden xl:inline-block text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#68716d] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm" title="Configure AI Model">
                     gemini-3-flash-preview
                 </button>
 
                 <!-- Live Token Usage Header Pill -->
-                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="headerTokenBadge" class="hidden sm:inline-flex items-center space-x-1.5 text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm cursor-pointer" title="Click to view detailed Token Analytics in Settings">
+                <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" id="headerTokenBadge" class="hidden xl:inline-flex items-center space-x-1.5 text-[10px] bg-[#ffffff] hover:bg-[#f5f2e9] text-[#173d34] border border-[#ddd8cc] px-2.5 py-1 rounded-full font-mono transition-colors shadow-sm cursor-pointer" title="Click to view detailed Token Analytics in Settings">
                     <i data-lucide="zap" class="w-3 h-3 text-[#b7843f]"></i>
                     <span id="headerTokenCountText">0 Tokens</span>
                 </button>
@@ -483,12 +483,12 @@ $currentUser = getCurrentUser();
                 </div>
 
                 <!-- Mobile Quick Lane Tabs (Direct 1-tap lane jumping) -->
-                <div id="mobileKanbanTabs" class="md:hidden flex items-center justify-between p-1 mx-3 mt-2 mb-1 bg-[#ede8dc] border border-[#ddd8cc] rounded-full text-[11px] flex-shrink-0">
-                    <button type="button" onclick="window.scrollKanbanToColumn('all')" class="mobile-lane-tab px-2.5 py-1 rounded-full font-bold bg-[#ffffff] text-[#173d34] shadow-sm" data-target="all">All</button>
-                    <button type="button" onclick="window.scrollKanbanToColumn('colTodo')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#68716d]" data-target="colTodo">To Do (<span id="mobileCountTodo">0</span>)</button>
-                    <button type="button" onclick="window.scrollKanbanToColumn('colInProgress')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#b7843f]" data-target="colInProgress">Progress (<span id="mobileCountInProgress">0</span>)</button>
-                    <button type="button" onclick="window.scrollKanbanToColumn('colReview')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#799a87]" data-target="colReview">Review (<span id="mobileCountReview">0</span>)</button>
-                    <button type="button" onclick="window.scrollKanbanToColumn('colCompleted')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#173d34]" data-target="colCompleted">Done (<span id="mobileCountCompleted">0</span>)</button>
+                <div id="mobileKanbanTabs" class="md:hidden flex items-center p-1 mx-2 sm:mx-3 mt-2 mb-1 bg-[#ede8dc] border border-[#ddd8cc] rounded-full text-[11px] flex-shrink-0 overflow-x-auto scrollbar-none gap-1">
+                    <button type="button" onclick="window.scrollKanbanToColumn('all')" class="mobile-lane-tab px-2.5 py-1 rounded-full font-bold bg-[#ffffff] text-[#173d34] shadow-sm flex-shrink-0" data-target="all">All</button>
+                    <button type="button" onclick="window.scrollKanbanToColumn('colTodo')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#68716d] flex-shrink-0" data-target="colTodo">To Do (<span id="mobileCountTodo">0</span>)</button>
+                    <button type="button" onclick="window.scrollKanbanToColumn('colInProgress')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#b7843f] flex-shrink-0" data-target="colInProgress">Progress (<span id="mobileCountInProgress">0</span>)</button>
+                    <button type="button" onclick="window.scrollKanbanToColumn('colReview')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#799a87] flex-shrink-0" data-target="colReview">Review (<span id="mobileCountReview">0</span>)</button>
+                    <button type="button" onclick="window.scrollKanbanToColumn('colCompleted')" class="mobile-lane-tab px-2.5 py-1 rounded-full text-[#173d34] flex-shrink-0" data-target="colCompleted">Done (<span id="mobileCountCompleted">0</span>)</button>
                 </div>
 
                 <!-- 1. Kanban Lanes View (Columns: To Do, In Progress, Review, Completed - Light Theme) -->
@@ -574,7 +574,7 @@ $currentUser = getCurrentUser();
                     </div>
 
                     <!-- Executive Seats Grid -->
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3 pt-2" id="boardroomSeats">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 pt-2" id="boardroomSeats">
                         <!-- Rendered dynamically -->
                     </div>
                 </div>
@@ -1609,17 +1609,17 @@ $currentUser = getCurrentUser();
         <div class="relative w-full max-w-lg bg-[#ffffff] border border-[#ddd8cc] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl p-4 sm:p-6 flex flex-col items-center text-center max-h-[95dvh] overflow-y-auto">
             
             <!-- Top Controls: Switch Executive & Close -->
-            <div class="w-full flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-[#173d34]">Executive Voice Link</span>
+            <div class="w-full flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
+                <div class="flex items-center space-x-2 min-w-0">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-[#173d34] truncate">Executive Voice Link</span>
                 </div>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-2 flex-shrink-0">
                     <!-- Executive Selector Dropdown during call -->
-                    <select id="callExecutiveSelect" class="bg-[#f5f2e9] border border-[#ddd8cc] text-xs text-[#173d34] font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-[#173d34] cursor-pointer">
+                    <select id="callExecutiveSelect" class="bg-[#f5f2e9] border border-[#ddd8cc] text-xs text-[#173d34] font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-[#173d34] cursor-pointer max-w-[140px] sm:max-w-[180px] truncate">
                         <!-- Populated dynamically via JS -->
                     </select>
-                    <button id="closeVoiceCallModalBtn" type="button" class="text-[#68716d] hover:text-[#173d34] p-1 rounded-lg hover:bg-[#f5f2e9] transition-colors">
+                    <button id="closeVoiceCallModalBtn" type="button" class="text-[#68716d] hover:text-[#173d34] p-1 rounded-lg hover:bg-[#f5f2e9] transition-colors flex-shrink-0" aria-label="Close Voice Call">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>

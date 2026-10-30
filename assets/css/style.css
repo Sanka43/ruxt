@@ -187,6 +187,8 @@ body {
   font-size: 0.935rem;
   line-height: 1.68;
   color: var(--text);
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .prose-custom p {
   margin-bottom: 0.75em;
@@ -225,6 +227,8 @@ body {
   font-size: 0.85em;
   border: 1px solid var(--line);
   font-weight: 600;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .prose-custom pre {
   margin: 0.75em 0;
@@ -235,12 +239,65 @@ body {
   overflow-x: auto;
   position: relative;
   box-shadow: 0 10px 25px rgba(23, 61, 52, 0.15);
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 .prose-custom pre code {
   font-family: var(--font-mono);
   font-size: 0.825rem;
   line-height: 1.55;
   color: #f6f5ea;
+  white-space: pre;
+  word-break: normal;
+}
+
+/* Full Responsive Markdown Tables */
+.prose-custom table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-collapse: collapse;
+  margin: 0.85em 0;
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.prose-custom th, .prose-custom td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.prose-custom th {
+  background-color: var(--panel);
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.prose-custom td {
+  background-color: #ffffff;
+}
+.prose-custom tr:nth-child(even) td {
+  background-color: #fdfcf9;
+}
+
+/* Responsive Media in Messages */
+.prose-custom img, .message-body img,
+.prose-custom video, .message-body video,
+.prose-custom iframe, .message-body iframe {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.prose-custom blockquote {
+  border-left: 3px solid var(--green);
+  margin: 0.75em 0;
+  padding-left: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
 }
 
 /* Copy code block button */
@@ -405,6 +462,10 @@ button, select, input, textarea, a {
   padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
 }
 
+#chatInputDockContainer {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+
 /* =================================================== */
 /* UNIVERSAL LIGHT THEME HARMONIZATION OVERRIDES       */
 /* =================================================== */
@@ -516,7 +577,11 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--green) !important;
 }
 
-/* Mobile Screen Breakpoint Optimizations */
+/* ========================================================
+   FULL RESPONSIVE SYSTEM (Mobile, Tablet, Desktop)
+   ======================================================== */
+
+/* General Mobile Breakpoint (max-width: 768px) */
 @media (max-width: 768px) {
   input[type="text"],
   input[type="password"],
@@ -526,23 +591,79 @@ input:focus, select:focus, textarea:focus {
   input[type="date"],
   select,
   textarea {
-    font-size: 16px !important;
+    font-size: 16px !important; /* Prevents auto-zoom in iOS Safari */
+  }
+
+  .prose-custom {
+    font-size: 0.885rem;
+    line-height: 1.6;
   }
 
   .prose-custom pre {
     max-width: 100%;
     overflow-x: auto;
     font-size: 0.775rem;
-    padding: 0.75rem 0.85rem;
+    padding: 0.7rem 0.8rem;
+    margin: 0.6em 0;
+  }
+
+  .prose-custom table {
+    font-size: 0.775rem;
+    margin: 0.65em 0;
+  }
+
+  .prose-custom th, .prose-custom td {
+    padding: 0.4rem 0.6rem;
   }
 
   .modal-dialog-responsive {
-    max-height: calc(100dvh - 1.5rem) !important;
+    max-height: calc(100dvh - 1.25rem) !important;
   }
 
   .mobile-touch-bar {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  /* Compact padding in mobile message bubbles */
+  .user-bubble, .assistant-bubble {
+    padding: 0.75rem 0.9rem !important;
+  }
+
+  /* Hide scrollbars on mobile horizontal scrollers */
+  #mobileExecutiveBar, #projectPillsBar, #mobileKanbanTabs {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+}
+
+/* Extra Small Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .prose-custom h1 { font-size: 1.15rem; }
+  .prose-custom h2 { font-size: 1.05rem; }
+  .prose-custom h3 { font-size: 0.95rem; }
+
+  /* Compact Kanban Columns on small phones */
+  #colTodoLane, #colInProgressLane, #colReviewLane, #colCompletedLane {
+    width: 86vw !important;
+  }
+
+  /* Toast alerts fit small screens neatly */
+  #ruxtToastContainer {
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+}
+
+/* Tablet Screen Breakpoint (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #sidebar {
+    width: 17.5rem !important; /* Slightly more compact to preserve central canvas */
+  }
+  
+  .kanban-cols-container {
+    gap: 0.75rem !important;
   }
 }
 
