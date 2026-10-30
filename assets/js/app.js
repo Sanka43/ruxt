@@ -870,6 +870,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentChatTitle.textContent = currentEx.name;
                         headerActiveSubtitle.textContent = currentEx.title;
                         headerActiveAvatar.src = currentEx.avatar_url;
+                        if (typingAvatar && currentEx.avatar_url) typingAvatar.src = currentEx.avatar_url;
+                        if (typingName) typingName.textContent = `${currentEx.name} is formulating response`;
                     }
                 }
             }
@@ -1529,8 +1531,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (current) {
             currentChatTitle.textContent = current.executive_name || current.title;
             headerActiveSubtitle.textContent = current.executive_title || 'Executive Advisor';
-            if (current.avatar_url) headerActiveAvatar.src = current.avatar_url;
             if (current.executive_id) state.selectedExecutiveId = current.executive_id;
+            const execMatch = state.executives.find(e => e.id == current.executive_id);
+            const targetAvatar = current.avatar_url || (execMatch ? execMatch.avatar_url : 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80');
+            if (headerActiveAvatar) headerActiveAvatar.src = targetAvatar;
+            if (typingAvatar) typingAvatar.src = targetAvatar;
+            if (typingName) typingName.textContent = `${current.executive_name || 'RuXt'} is formulating response`;
             if (headerProjectName) headerProjectName.textContent = current.project_name || 'All Projects';
             renderExecutivesList();
         }
@@ -1769,6 +1775,17 @@ document.addEventListener('DOMContentLoaded', () => {
         appendMessage('user', displayText, true, null, null, null, null, null, null, null, null, displayAttachments);
         scrollToBottom();
 
+        // Ensure typing indicator avatar matches currently selected executive or RuXt
+        const activeExec = state.executives.find(e => e.id == state.selectedExecutiveId) ||
+                           state.executives.find(e => e.is_chief_of_staff == 1) ||
+                           { name: 'RuXt', avatar_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80' };
+        if (typingAvatar && activeExec.avatar_url) {
+            typingAvatar.src = activeExec.avatar_url;
+        }
+        if (typingName) {
+            typingName.textContent = `${activeExec.name || 'RuXt'} is thinking`;
+        }
+
         typingIndicator.classList.remove('hidden');
         scrollToBottom();
 
@@ -1923,7 +1940,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? (typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(marked.parse(safeRawContent)) : marked.parse(safeRawContent))
                 : escapeHtml(safeRawContent));
         const exec = state.executives.find(e => e.id == state.selectedExecutiveId);
-        const avatarUrl = exec ? exec.avatar_url : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80';
+        const avatarUrl = exec ? exec.avatar_url : 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80';
 
         const avatar = isUser
             ? `<div class="w-8 h-8 rounded-full bg-[#173d34] text-[#fcfaf5] flex items-center justify-center text-xs font-bold shadow-sm flex-shrink-0 ml-3 mt-1">CEO</div>`

@@ -621,7 +621,7 @@ $currentUser = getCurrentUser();
                     <!-- Typing Indicator -->
                     <div id="typingIndicator" class="hidden max-w-3xl mx-auto flex items-center space-x-3 text-[#68716d] text-xs pl-2">
                         <div class="w-7 h-7 rounded-full overflow-hidden border border-[#173d34]/30">
-                            <img id="typingAvatar" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80" class="w-full h-full object-cover">
+                            <img id="typingAvatar" src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80" alt="RuXt Thinking" class="w-full h-full object-cover">
                         </div>
                         <div class="flex items-center space-x-1.5 bg-[#ffffff] border border-[#ddd8cc] px-3.5 py-1.5 rounded-full shadow-sm">
                             <span class="text-[#202725] font-medium mr-1 text-[11px]" id="typingName">Thinking</span>
