@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
 import {
+  findStoredUserByEmail,
+  upsertStoredUser,
+  authenticateLocalUser
+} from '../../utils/userRegistry';
+import {
   Lock,
   Mail,
   User as UserIcon,
@@ -34,6 +39,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     if (mode === 'register') {
       if (!name.trim()) {
         setError('Please enter your full name.');
@@ -47,6 +54,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         setError('Passwords do not match.');
         return;
       }
+      const existing = findStoredUserByEmail(cleanEmail);
+      if (existing) {
+        setError('An account with this email address already exists. Please sign in instead.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -55,8 +67,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
       const body =
         mode === 'login'
-          ? { email: email.trim(), password }
-          : { name: name.trim(), email: email.trim(), password };
+          ? { email: cleanEmail, password }
+          : { name: name.trim(), email: cleanEmail, password };
 
       let isSuccess = false;
 
@@ -74,6 +86,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           if (res.ok && data.ok) {
             localStorage.setItem('ruxt_auth_token', data.token);
             localStorage.setItem('ruxt_user', JSON.stringify(data.user));
+            // Ensure synced to local registry
+            upsertStoredUser({
+              ...data.user,
+              password
+            });
             onLoginSuccess(data.user, data.token);
             isSuccess = true;
             return;
@@ -83,31 +100,42 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         }
       } catch (networkErr: any) {
         // If it was an explicit credential error from JSON, rethrow
-        if (networkErr.message && !networkErr.message.includes('token') && !networkErr.message.includes('JSON')) {
+        if (
+          networkErr.message &&
+          !networkErr.message.includes('token') &&
+          !networkErr.message.includes('JSON') &&
+          !networkErr.message.includes('fetch')
+        ) {
           throw networkErr;
         }
       }
 
       // If backend API returned HTML or is offline on static host, activate Local Workspace Session
       if (!isSuccess) {
-        const cleanEmail = email.trim().toLowerCase();
-        const isAdmin = cleanEmail === 'admin@ruxt.org';
-        const displayName = mode === 'register' ? name.trim() : isAdmin ? 'RuXt Admin' : cleanEmail.split('@')[0];
+        if (mode === 'register') {
+          const isAdmin = cleanEmail === 'admin@ruxt.org';
+          const displayName = name.trim();
+          const registered = upsertStoredUser({
+            name: displayName,
+            email: cleanEmail,
+            password: password,
+            role: isAdmin ? 'admin' : 'user',
+            avatar: displayName.charAt(0).toUpperCase()
+          });
 
-        const localUser: User = {
-          id: isAdmin ? 'usr_admin_01' : `usr_local_${Date.now()}`,
-          name: displayName,
-          email: cleanEmail,
-          avatar: isAdmin ? '🛡️' : displayName.charAt(0).toUpperCase(),
-          role: isAdmin ? 'admin' : 'user',
-          createdAt: Date.now()
-        };
+          const localToken = `ruxt_session_${registered.id}_${Date.now()}`;
+          localStorage.setItem('ruxt_auth_token', localToken);
+          localStorage.setItem('ruxt_user', JSON.stringify(registered));
 
-        const localToken = `ruxt_session_${Date.now()}`;
-        localStorage.setItem('ruxt_auth_token', localToken);
-        localStorage.setItem('ruxt_user', JSON.stringify(localUser));
+          onLoginSuccess(registered, localToken);
+        } else {
+          // Local login verification against stored registry
+          const { user: authUser, token: localToken } = authenticateLocalUser(cleanEmail, password);
+          localStorage.setItem('ruxt_auth_token', localToken);
+          localStorage.setItem('ruxt_user', JSON.stringify(authUser));
 
-        onLoginSuccess(localUser, localToken);
+          onLoginSuccess(authUser, localToken);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred. Please try again.');

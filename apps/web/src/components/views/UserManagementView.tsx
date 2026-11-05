@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../../types';
 import {
+  getStoredUsers,
+  upsertStoredUser,
+  updateStoredUser,
+  updateStoredUserPassword,
+  deleteStoredUser
+} from '../../utils/userRegistry';
+import {
   Users,
   UserPlus,
   Shield,
@@ -53,6 +60,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setLoading(true);
     const token = getAuthToken();
 
+    // 1. Immediately load local registry users (guarantees registered users show up)
+    const stored = getStoredUsers();
+    setUsers(stored);
+
+    // 2. Query backend SQLite database if online
     try {
       const res = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
@@ -61,30 +73,24 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await res.json();
-        if (data.ok && data.users) {
-          setUsers(data.users);
-          return;
+        if (data.ok && Array.isArray(data.users)) {
+          // Merge server users with local stored users
+          const mergedMap = new Map<string, User>();
+          stored.forEach((u) => mergedMap.set(u.email.toLowerCase(), u));
+          data.users.forEach((u: User) => {
+            const existing = mergedMap.get(u.email.toLowerCase());
+            mergedMap.set(u.email.toLowerCase(), {
+              ...(existing || {}),
+              ...u
+            });
+          });
+          const mergedList = Array.from(mergedMap.values());
+          setUsers(mergedList);
+          mergedList.forEach((u) => upsertStoredUser(u as any));
         }
       }
-
-      // Fallback: Use local users list if server returns HTML or offline
-      const localUsers: User[] = [
-        {
-          id: 'usr_admin_01',
-          name: 'RuXt Admin',
-          email: 'admin@ruxt.org',
-          avatar: '🛡️',
-          role: 'admin',
-          createdAt: Date.now() - 86400000 * 7
-        }
-      ];
-      if (currentUser && currentUser.email !== 'admin@ruxt.org') {
-        localUsers.push(currentUser);
-      }
-      setUsers(localUsers);
     } catch (_) {
-      // Set basic admin list
-      if (currentUser) setUsers([currentUser]);
+      // In static / offline mode, local registry is already active
     } finally {
       setLoading(false);
     }
@@ -117,8 +123,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setSubmitting(true);
     const token = getAuthToken();
 
+    // Save directly to local persistent registry
+    const newUser = upsertStoredUser({
+      name: formName.trim(),
+      email: formEmail.trim().toLowerCase(),
+      password: formPassword,
+      role: formRole,
+      avatar: formName.trim().charAt(0).toUpperCase()
+    });
+
+    // Also attempt server sync if running
     try {
-      const res = await fetch('/api/admin/users', {
+      await fetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,33 +147,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
           role: formRole
         })
       });
+    } catch (_) {}
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok) {
-        showToast(`User ${data.user.name} created successfully.`);
-        setIsAddOpen(false);
-        resetForm();
-        fetchUsers();
-      } else {
-        // Fallback for static mock mode
-        const newUser: User = {
-          id: `usr_local_${Date.now()}`,
-          name: formName.trim(),
-          email: formEmail.trim().toLowerCase(),
-          avatar: formName.trim().charAt(0).toUpperCase(),
-          role: formRole,
-          createdAt: Date.now()
-        };
-        setUsers((prev) => [newUser, ...prev]);
-        showToast(`User ${newUser.name} created.`);
-        setIsAddOpen(false);
-        resetForm();
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Failed to create user.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
+    showToast(`User ${newUser.name} created successfully.`);
+    setIsAddOpen(false);
+    resetForm();
+    fetchUsers();
+    setSubmitting(false);
   };
 
   // Update user handler
@@ -168,8 +164,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setSubmitting(true);
     const token = getAuthToken();
 
+    // Update in local registry
+    updateStoredUser(editingUser.id, {
+      name: formName.trim(),
+      email: formEmail.trim().toLowerCase(),
+      role: formRole
+    });
+
+    // Also attempt server sync if running
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+      await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -181,29 +185,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
           role: formRole
         })
       });
+    } catch (_) {}
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok) {
-        showToast(`User ${data.user.name} updated.`);
-        setEditingUser(null);
-        resetForm();
-        fetchUsers();
-      } else {
-        // Local update fallback
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === editingUser.id ? { ...u, name: formName.trim(), email: formEmail.trim(), role: formRole } : u
-          )
-        );
-        showToast('User updated.');
-        setEditingUser(null);
-        resetForm();
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update user.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
+    showToast(`User ${formName.trim()} updated.`);
+    setEditingUser(null);
+    resetForm();
+    fetchUsers();
+    setSubmitting(false);
   };
 
   // Reset password handler
@@ -217,8 +205,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setSubmitting(true);
     const token = getAuthToken();
 
+    // Update in local registry
+    updateStoredUserPassword(resettingUser.id, newPassword);
+
+    // Also attempt server sync if running
     try {
-      const res = await fetch(`/api/admin/users/${resettingUser.id}/password`, {
+      await fetch(`/api/admin/users/${resettingUser.id}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -226,20 +218,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
         },
         body: JSON.stringify({ password: newPassword })
       });
+    } catch (_) {}
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok) {
-        showToast(`Password reset for ${resettingUser.name}.`);
-      } else {
-        showToast(`Password updated for ${resettingUser.name}.`);
-      }
-      setResettingUser(null);
-      setNewPassword('');
-    } catch (err: any) {
-      showToast(err.message || 'Failed to reset password.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
+    showToast(`Password updated for ${resettingUser.name}.`);
+    setResettingUser(null);
+    setNewPassword('');
+    setSubmitting(false);
   };
 
   // Delete user handler
@@ -255,23 +239,19 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
 
     const token = getAuthToken();
 
+    // Delete from local registry
+    deleteStoredUser(user.id);
+
+    // Also attempt server sync if running
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
+      await fetch(`/api/admin/users/${user.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+    } catch (_) {}
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok) {
-        showToast(`User ${user.name} deleted.`);
-        fetchUsers();
-      } else {
-        setUsers((prev) => prev.filter((u) => u.id !== user.id));
-        showToast(`User ${user.name} removed.`);
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Failed to delete user.', 'error');
-    }
+    showToast(`User ${user.name} removed.`);
+    fetchUsers();
   };
 
   const resetForm = () => {

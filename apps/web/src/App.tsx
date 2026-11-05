@@ -184,14 +184,25 @@ export function App() {
         if (ct.includes('application/json')) {
           return res.json();
         }
-        return { ok: false };
+        return { isOfflineHost: true };
       })
       .then((data) => {
         if (data.ok && data.user) {
           setCurrentUser(data.user);
           setUserName(data.user.name);
           localStorage.setItem('ruxt_user', JSON.stringify(data.user));
+        } else if (data.isOfflineHost) {
+          // In static/cPanel deployment, maintain the active local session
+          const saved = localStorage.getItem('ruxt_user');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              setCurrentUser(parsed);
+              setUserName(parsed.name);
+            } catch (_) {}
+          }
         } else {
+          // Explicit authorization failure from backend
           localStorage.removeItem('ruxt_auth_token');
           localStorage.removeItem('ruxt_user');
           setCurrentUser(null);
