@@ -1,0 +1,29 @@
+{
+  "name": "ruxt-next",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next-generation local-first & cloud-ready AI Agent Operating Workspace",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace=apps/server run dev",
+    "dev:web": "npm --workspace=apps/web run dev",
+    "build:web": "npm --workspace=apps/web run build",
+    "build:server": "npm --workspace=apps/server run build",
+    "build": "npm run build:web && npm run build:server",
+    "start": "node apps/server/dist/index.js",
+    "tunnel": "npm --workspace=apps/tunnel-cli run start",
+    "dev": "npm --workspace=apps/server run dev"
+  },
+  "keywords": [
+    "ai-agents",
+    "multi-agent",
+    "workspace",
+    "fastify",
+    "react19",
+    "drizzle"
+  ],
+  "author": "",
+  "license": "MIT"
+}

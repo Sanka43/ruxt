@@ -1,0 +1,333 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #161a22;
+  --muted: #68707c;
+  --line: #e4e7ec;
+  --accent: #143228;
+  --accent-soft: #e7efeb;
+  --ruxt: #143228;
+  --ruxt-soft: #e7efeb;
+  --sidebar: #1a2330;
+  --sidebar-line: #2a3545;
+  --sidebar-text: #d7dee8;
+  --sidebar-muted: #8b98ab;
+  --sidebar-panel: #121925;
+  --sidebar-hover: #243041;
+  --sidebar-active: #2b3a4d;
+  --green: #14866d;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  code, pre, kbd, .font-mono {
+    font-family: 'DM Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+/* RuXt Signature Brand Lockup */
+.ruxt-lockup {
+  width: 176px;
+  height: 56px;
+  object-fit: contain;
+  object-position: center;
+  background: #f4f1ea !important;
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+
+.crumb-brand {
+  color: #78a7ff;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+}
+
+/* Eyebrow badge */
+.eyebrow {
+  display: block;
+  color: #8a929e;
+  font: 10px/1.2 'DM Mono', monospace;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Back Modern Pill Button */
+.back-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7fb 100%);
+  color: #1d2430;
+  box-shadow: 0 4px 14px rgba(24, 39, 75, 0.06), inset 0 1px 0 #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.back-modern:hover {
+  transform: translateY(-1px);
+  border-color: #9bbcff;
+  box-shadow: 0 8px 20px rgba(41, 84, 196, 0.12);
+}
+
+.back-modern:active {
+  transform: translateY(0);
+}
+
+.back-chevron {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #111827;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.back-copy {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.back-copy strong {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.back-copy small {
+  font-size: 10px;
+  color: #7b8797;
+  font-weight: 500;
+}
+
+/* Agent Card in Shelf */
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  min-height: 120px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 2px 5px rgba(36, 49, 77, 0.04);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.agent-card:hover {
+  border-color: #9bbcff;
+  box-shadow: 0 8px 20px rgba(36, 49, 77, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Room Items */
+.room-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 90%, var(--bg));
+  transition: all 0.14s ease;
+}
+
+.room-item.room-link {
+  cursor: pointer;
+}
+
+.room-item.room-link:hover {
+  border-color: #9bbcff;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Forum Thread Cards */
+.forum-thread {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  transition: all 0.14s ease;
+}
+
+.forum-thread:hover {
+  border-color: #9bbcff;
+  box-shadow: 0 4px 14px rgba(36, 49, 77, 0.06);
+}
+
+.thread-vote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px;
+  background: color-mix(in srgb, var(--bg) 60%, var(--surface));
+  color: var(--muted);
+}
+
+/* Ambient Theme Decorations */
+.theme-decor {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.theme-decor .decor-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.28;
+  animation: themeDrift 18s ease-in-out infinite alternate;
+}
+
+.theme-decor .decor-orb.a {
+  width: 42vw;
+  height: 42vw;
+  left: -8vw;
+  top: -10vh;
+  background: color-mix(in srgb, var(--ruxt) 40%, transparent);
+}
+
+.theme-decor .decor-orb.b {
+  width: 36vw;
+  height: 36vw;
+  right: -6vw;
+  bottom: 8vh;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  animation-duration: 22s;
+}
+
+.theme-decor .decor-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: radial-gradient(#000 0.6px, transparent 0.7px);
+  background-size: 3px 3px;
+  mix-blend-mode: multiply;
+}
+
+.theme-decor .decor-ribbon {
+  position: absolute;
+  height: 2px;
+  width: 48vw;
+  left: 20vw;
+  top: 18vh;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ruxt) 55%, transparent), transparent);
+  animation: themeSweep 14s linear infinite;
+  opacity: 0.35;
+}
+
+@keyframes themeDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(3vw, 2.5vh, 0) scale(1.06); }
+}
+
+@keyframes themeSweep {
+  from { transform: translateX(-12vw); }
+  to { transform: translateX(18vw); }
+}
+
+@keyframes themePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Theme Studio Stage */
+.theme-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 22px;
+  min-height: 200px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--ruxt) 22%, transparent), transparent 55%),
+    radial-gradient(90% 80% at 100% 20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 50%),
+    linear-gradient(145deg, var(--surface), color-mix(in srgb, var(--bg) 70%, var(--surface)));
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: 0 16px 36px rgba(20, 27, 43, 0.06);
+}
+
+.theme-orb {
+  position: relative;
+  flex: 0 0 160px;
+  min-height: 140px;
+  border-radius: 20px;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  color: #fff;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 12px 24px rgba(20, 27, 43, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-orb:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(20, 27, 43, 0.18);
+}
+
+.theme-orb.active {
+  outline: 2px solid var(--ruxt);
+  outline-offset: 3px;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+}
