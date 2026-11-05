@@ -43,7 +43,20 @@ console.log(`- Cursor:          ${tools.cursor ? '✅ Ready' : '⚪ Not in PATH'
 console.log(`- Claude Code:     ${tools.claude ? '✅ Ready' : '⚪ Not in PATH'}`);
 console.log(`- Ollama CLI:      ${tools.ollama ? '✅ Detected' : '⚪ Not in PATH'}`);
 
-const targetServer = process.env.RUXT_HOST || 'ws://localhost:1234/ws';
+let rawTarget = process.env.RUXT_HOST || process.argv[2] || 'ws://localhost:1234/ws';
+if (!rawTarget.startsWith('ws://') && !rawTarget.startsWith('wss://')) {
+  if (rawTarget.startsWith('https://')) {
+    rawTarget = rawTarget.replace('https://', 'wss://');
+  } else if (rawTarget.startsWith('http://')) {
+    rawTarget = rawTarget.replace('http://', 'ws://');
+  } else {
+    rawTarget = (rawTarget.includes('localhost') ? 'ws://' : 'wss://') + rawTarget;
+  }
+}
+if (!rawTarget.endsWith('/ws')) {
+  rawTarget = rawTarget.replace(/\/+$/, '') + '/ws';
+}
+const targetServer = rawTarget;
 console.log(`\nInitiating Outbound WebSocket to ${targetServer}...`);
 
 function connect() {

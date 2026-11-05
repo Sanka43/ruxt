@@ -579,6 +579,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span style={{ color: 'var(--ink)' }}>Allow opening connected apps when needed</span>
             </label>
           </div>
+
+          {/* Cloud-to-Local Bridge Connection Guide */}
+          <div
+            className="p-4 rounded-xl border space-y-3 mt-4"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--accent) 30%, var(--line))',
+              backgroundColor: 'var(--accent-soft)'
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <Terminal className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+              <h3 className="text-xs font-bold" style={{ color: 'var(--ink)' }}>
+                How to Connect Local IDE to Cloud Workspace
+              </h3>
+            </div>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--muted)' }}>
+              RuXt utilizes an outbound persistent WebSocket tunnel to safely bridge cloud sessions with your local environment without needing public inbound ports.
+            </p>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                1. Connect to Live Cloud Workspace (app.ruxt.org)
+              </span>
+              <div
+                className="px-3 py-2 rounded-lg font-mono text-[11px] flex items-center justify-between border"
+                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink)' }}
+              >
+                <span>npm run tunnel -- https://app.ruxt.org</span>
+                <span className="text-[10px] text-emerald-500 font-semibold">Outbound WebSocket</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                2. Connect to Local Development Server
+              </span>
+              <div
+                className="px-3 py-2 rounded-lg font-mono text-[11px] flex items-center justify-between border"
+                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--ink)' }}
+              >
+                <span>npm run tunnel</span>
+                <span className="text-[10px] text-slate-400">ws://localhost:1234/ws</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                3. Antigravity IDE Native MCP Integration
+              </span>
+              <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                Antigravity IDE communicates directly via the registered <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">ruxt</code> MCP tools (<code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">ruxt_status</code>, <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">ruxt_run_command</code>, <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">ruxt_read_file</code>).
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
