@@ -178,7 +178,13 @@ export function App() {
     fetch('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then((res) => res.json())
+      .then((res) => {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          return res.json();
+        }
+        return { ok: false };
+      })
       .then((data) => {
         if (data.ok && data.user) {
           setCurrentUser(data.user);
