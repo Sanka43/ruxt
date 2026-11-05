@@ -6,14 +6,16 @@ interface AgentsViewProps {
   agents: Agent[];
   onSelectAgent: (id: string) => void;
   onToggleInstall: (id: string) => void;
-  onOpenStudio: () => void;
+  onOpenStudio?: () => void;
+  isAdmin?: boolean;
 }
 
 export const AgentsView: React.FC<AgentsViewProps> = ({
   agents,
   onSelectAgent,
   onToggleInstall,
-  onOpenStudio
+  onOpenStudio,
+  isAdmin = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -54,16 +56,18 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onOpenStudio}
-            className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
-            style={{ backgroundColor: 'var(--ruxt)' }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>＋ Import agent</span>
-          </button>
-        </div>
+        {isAdmin && onOpenStudio && (
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={onOpenStudio}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
+              style={{ backgroundColor: 'var(--ruxt)' }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>＋ Import agent</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search Bar */}

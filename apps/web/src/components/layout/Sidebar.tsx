@@ -323,25 +323,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           )}
           <div className="space-y-0.5">
-            <button
-              onClick={() => handleNavView('studio')}
-              title="Admin Agent Studio"
-              className={`w-full flex items-center ${
-                isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-1.5'
-              } rounded-lg text-xs font-semibold transition ${
-                currentView === 'studio'
-                  ? 'text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              }`}
-              style={
-                currentView === 'studio'
-                  ? { backgroundColor: 'var(--sidebar-active)', color: '#fff' }
-                  : {}
-              }
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              {!isCollapsed && <span>Agent Studio</span>}
-            </button>
+            {/* Admin Agent Studio (Admin only) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => handleNavView('studio')}
+                title="Admin Agent Studio"
+                className={`w-full flex items-center ${
+                  isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-1.5'
+                } rounded-lg text-xs font-semibold transition ${
+                  currentView === 'studio'
+                    ? 'text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+                style={
+                  currentView === 'studio'
+                    ? { backgroundColor: 'var(--sidebar-active)', color: '#fff' }
+                    : {}
+                }
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                {!isCollapsed && <span>Agent Studio</span>}
+              </button>
+            )}
 
             <button
               onClick={() => handleNavView('marketplace')}

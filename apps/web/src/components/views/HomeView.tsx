@@ -9,9 +9,10 @@ interface HomeViewProps {
   onSelectAgent: (agentId: string) => void;
   onOpenMessages: () => void;
   onOpenThreads: () => void;
-  onOpenStudio: () => void;
+  onOpenStudio?: () => void;
   onOpenThreadDetail?: (threadId: string) => void;
   userName?: string;
+  isAdmin?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -23,7 +24,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenThreads,
   onOpenStudio,
   onOpenThreadDetail,
-  userName = 'You'
+  userName = 'You',
+  isAdmin = false
 }) => {
   const installedAgents = agents.filter((a) => a.isInstalled);
 
@@ -59,18 +61,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
             Domain-specialized AI copilots operating in your local environment.
           </p>
         </div>
-        <button
-          onClick={onOpenStudio}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs border transition hover:opacity-90 self-start sm:self-auto"
-          style={{
-            borderColor: 'var(--line)',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--ink)'
-          }}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Import agent</span>
-        </button>
+        {isAdmin && onOpenStudio && (
+          <button
+            onClick={onOpenStudio}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs border transition hover:opacity-90 self-start sm:self-auto cursor-pointer"
+            style={{
+              borderColor: 'var(--line)',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--ink)'
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Import agent</span>
+          </button>
+        )}
       </div>
 
       {/* Agents Shelf Grid */}

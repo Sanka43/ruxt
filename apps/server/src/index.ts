@@ -255,6 +255,9 @@ fastify.get('/api/agents', async () => {
 });
 
 fastify.post('/api/agents', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+
   const body = request.body as any;
   if (!body?.name || !body?.role) {
     return reply.status(400).send({ error: 'Name and role are required' });

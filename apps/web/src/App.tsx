@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Agent, Task, ChatMessage, Thread, Decision, ActivityItem, User } from './types';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -552,6 +553,7 @@ export function App() {
             threads={threads}
             recentMessages={messages}
             userName={userName}
+            isAdmin={currentUser?.role === 'admin'}
             onSelectAgent={(id) => {
               setActiveAgentId(id);
               setCurrentView('workspace');
@@ -561,7 +563,9 @@ export function App() {
               setCurrentView('forum');
               setSelectedThreadId(null);
             }}
-            onOpenStudio={() => setCurrentView('studio')}
+            onOpenStudio={() => {
+              if (currentUser?.role === 'admin') setCurrentView('studio');
+            }}
             onOpenThreadDetail={(thId) => {
               setSelectedThreadId(thId);
               setCurrentView('forum');
@@ -570,12 +574,15 @@ export function App() {
         ) : currentView === 'agents' ? (
           <AgentsView
             agents={agents}
+            isAdmin={currentUser?.role === 'admin'}
             onSelectAgent={(id) => {
               setActiveAgentId(id);
               setCurrentView('workspace');
             }}
             onToggleInstall={handleToggleInstall}
-            onOpenStudio={() => setCurrentView('studio')}
+            onOpenStudio={() => {
+              if (currentUser?.role === 'admin') setCurrentView('studio');
+            }}
           />
         ) : currentView === 'messages' ? (
           <MessagesView
@@ -610,19 +617,44 @@ export function App() {
             onLogout={handleLogout}
           />
         ) : currentView === 'studio' ? (
-          <AgentStudio
-            onAgentCreated={(newAgent) => {
-              setAgents((prev) => [...prev, newAgent]);
-              setActiveAgentId(newAgent.id);
-              setCurrentView('workspace');
-            }}
-            onClose={() => setCurrentView('workspace')}
-          />
+          currentUser?.role === 'admin' ? (
+            <AgentStudio
+              onAgentCreated={(newAgent) => {
+                setAgents((prev) => [...prev, newAgent]);
+                setActiveAgentId(newAgent.id);
+                setCurrentView('workspace');
+              }}
+              onClose={() => setCurrentView('workspace')}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none">
+              <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500 mb-4 shadow-lg shadow-rose-500/5">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold mb-2 tracking-tight" style={{ color: 'var(--ink)' }}>
+                Administrator Access Restricted
+              </h2>
+              <p className="text-xs max-w-sm mb-6 leading-relaxed" style={{ color: 'var(--muted)' }}>
+                Agent Studio is an administrative design workspace reserved for workspace administrators. Contact your administrator if you require access.
+              </p>
+              <button
+                onClick={() => setCurrentView('home')}
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: 'var(--ruxt)' }}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Home</span>
+              </button>
+            </div>
+          )
         ) : currentView === 'marketplace' ? (
           <MarketplaceView
             agents={agents}
+            isAdmin={currentUser?.role === 'admin'}
             onToggleInstall={handleToggleInstall}
-            onOpenStudio={() => setCurrentView('studio')}
+            onOpenStudio={() => {
+              if (currentUser?.role === 'admin') setCurrentView('studio');
+            }}
           />
         ) : currentView === 'users' ? (
           <UserManagementView currentUser={currentUser} />
