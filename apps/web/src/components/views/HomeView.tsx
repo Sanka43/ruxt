@@ -11,6 +11,7 @@ interface HomeViewProps {
   onOpenThreads: () => void;
   onOpenStudio: () => void;
   onOpenThreadDetail?: (threadId: string) => void;
+  userName?: string;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -21,7 +22,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenMessages,
   onOpenThreads,
   onOpenStudio,
-  onOpenThreadDetail
+  onOpenThreadDetail,
+  userName = 'You'
 }) => {
   const installedAgents = agents.filter((a) => a.isInstalled);
 
@@ -191,12 +193,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           color: 'var(--accent)'
                         }}
                       >
-                        {msg.role === 'user' ? 'K' : ag?.avatar || '✦'}
+                        {msg.role === 'user' ? (userName ? userName.charAt(0).toUpperCase() : 'U') : ag?.avatar || '✦'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between text-[11px]">
                           <strong style={{ color: 'var(--ink)' }}>
-                            {msg.role === 'user' ? 'Kosala' : ag?.name || 'Agent'}
+                            {msg.role === 'user' ? userName : ag?.name || 'Agent'}
                           </strong>
                           <span className="text-[10px] font-mono" style={{ color: 'var(--muted)' }}>
                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

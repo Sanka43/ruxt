@@ -21,6 +21,24 @@ sqlite.pragma('journal_mode = WAL');
 
 // Auto-create tables if they don't exist
 sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    avatar TEXT NOT NULL DEFAULT '👤',
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS agents (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -38,6 +56,7 @@ sqlite.exec(`
 
   CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     agent_id TEXT NOT NULL,
     prompt TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'queued',
@@ -51,6 +70,7 @@ sqlite.exec(`
 
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     agent_id TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -62,26 +82,34 @@ sqlite.exec(`
 
 // Safely migrate columns if table already exists
 try {
-  const columns = sqlite.pragma('table_info(agents)') as Array<{ name: string }>;
-  const colNames = new Set(columns.map((c) => c.name));
+  const agentsCols = (sqlite.pragma('table_info(agents)') as Array<{ name: string }>).map((c) => c.name);
+  const tasksCols = (sqlite.pragma('table_info(tasks)') as Array<{ name: string }>).map((c) => c.name);
+  const msgsCols = (sqlite.pragma('table_info(messages)') as Array<{ name: string }>).map((c) => c.name);
 
-  if (!colNames.has('domain')) {
+  if (!agentsCols.includes('domain')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN domain TEXT DEFAULT 'general';`);
   }
-  if (!colNames.has('strict_guardrails')) {
+  if (!agentsCols.includes('strict_guardrails')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN strict_guardrails INTEGER DEFAULT 1;`);
   }
-  if (!colNames.has('target_legend_level')) {
+  if (!agentsCols.includes('target_legend_level')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN target_legend_level TEXT DEFAULT 'Master / Legend';`);
   }
-  if (!colNames.has('curriculum')) {
+  if (!agentsCols.includes('curriculum')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN curriculum TEXT DEFAULT '[]';`);
   }
-  if (!colNames.has('specialized_knowledge')) {
+  if (!agentsCols.includes('specialized_knowledge')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN specialized_knowledge TEXT DEFAULT '[]';`);
   }
-  if (!colNames.has('guardrail_redirect_message')) {
+  if (!agentsCols.includes('guardrail_redirect_message')) {
     sqlite.exec(`ALTER TABLE agents ADD COLUMN guardrail_redirect_message TEXT;`);
+  }
+
+  if (!tasksCols.includes('user_id')) {
+    sqlite.exec(`ALTER TABLE tasks ADD COLUMN user_id TEXT;`);
+  }
+  if (!msgsCols.includes('user_id')) {
+    sqlite.exec(`ALTER TABLE messages ADD COLUMN user_id TEXT;`);
   }
 } catch (e) {
   console.warn('DB Migration note:', e);

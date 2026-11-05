@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   messageCount = 0,
   threadCount = 0,
-  userName = 'Kosala'
+  userName = 'User'
 }) => {
   const installedAgents = agents.filter((a) => a.isInstalled);
 

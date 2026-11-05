@@ -53,12 +53,30 @@ export interface Task {
 
 export interface ChatMessage {
   id: string;
+  userId?: string;
   agentId: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   taskId?: string;
   metadata?: Record<string, any>;
   createdAt: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: 'admin' | 'user';
+  createdAt: number;
+  updatedAt?: number;
+}
+
+export interface AuthResponse {
+  ok: boolean;
+  user?: User;
+  token?: string;
+  error?: string;
 }
 
 export interface ProviderStatus {

@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { THEME_PRESETS, applyTheme } from '../../utils/theme';
-import { ActivityItem } from '../../types';
-import { Check, RefreshCw, Sparkles, Terminal, Volume2 } from 'lucide-react';
+import { ActivityItem, User } from '../../types';
+import { Check, RefreshCw, Sparkles, Terminal, Volume2, LogOut, ShieldCheck, Mail, User as UserIcon } from 'lucide-react';
 
 interface SettingsViewProps {
   onProfileUpdated?: (name: string) => void;
   activities?: ActivityItem[];
+  currentUser?: User | null;
+  onLogout?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   onProfileUpdated,
-  activities = []
+  activities = [],
+  currentUser,
+  onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'workspace' | 'activity' | 'tools' | 'notifications' | 'themes'>('profile');
 
   // Profile State
-  const [fullName, setFullName] = useState(() => localStorage.getItem('ruxt_fullname') || 'Kosala');
-  const [preferredName, setPreferredName] = useState(() => localStorage.getItem('ruxt_pref_name') || 'Kosala');
+  const [fullName, setFullName] = useState(() => currentUser?.name || localStorage.getItem('ruxt_fullname') || 'User');
+  const [preferredName, setPreferredName] = useState(() => currentUser?.name || localStorage.getItem('ruxt_pref_name') || 'User');
   const [timezone, setTimezone] = useState(() => localStorage.getItem('ruxt_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Colombo');
   const [language, setLanguage] = useState(() => localStorage.getItem('ruxt_language') || 'English');
   const [occupation, setOccupation] = useState(() => localStorage.getItem('ruxt_occupation') || 'Founder, designer');
@@ -53,7 +57,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setSaveToast(null), 3000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('ruxt_fullname', fullName);
     localStorage.setItem('ruxt_pref_name', preferredName);
@@ -62,8 +66,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     localStorage.setItem('ruxt_occupation', occupation);
     localStorage.setItem('ruxt_tone', tone);
     localStorage.setItem('ruxt_goals', goals);
+
+    const token = localStorage.getItem('ruxt_auth_token');
+    if (token) {
+      try {
+        await fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ name: fullName })
+        });
+      } catch (_) {}
+    }
+
     if (onProfileUpdated) onProfileUpdated(preferredName || fullName);
-    showSaveNotice('Profile saved to this local workspace.');
+    showSaveNotice('Profile saved successfully.');
   };
 
   const handleSaveWorkspace = (e: React.FormEvent) => {
@@ -177,6 +196,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           className="rounded-xl border p-6 space-y-6"
           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--line)' }}
         >
+          {/* Account Overview Box */}
+          {currentUser && (
+            <div
+              className="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              style={{
+                borderColor: 'var(--line)',
+                backgroundColor: 'color-mix(in srgb, var(--bg) 70%, var(--surface))'
+              }}
+            >
+              <div className="flex items-center space-x-3.5">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 shadow-xs border"
+                  style={{
+                    backgroundColor: 'var(--accent-soft)',
+                    borderColor: 'var(--line)',
+                    color: 'var(--accent)'
+                  }}
+                >
+                  {currentUser.avatar || currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-sm" style={{ color: 'var(--ink)' }}>{currentUser.name}</span>
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                      {currentUser.role}
+                    </span>
+                  </div>
+                  <div className="text-xs flex items-center space-x-1" style={{ color: 'var(--muted)' }}>
+                    <Mail className="w-3 h-3" />
+                    <span>{currentUser.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="px-3.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 text-rose-500 hover:bg-rose-500/10 transition cursor-pointer self-start sm:self-center"
+                  style={{ borderColor: 'color-mix(in srgb, #f43f5e 30%, var(--line))' }}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-1">
             <span className="eyebrow">Identity</span>
             <h2 className="text-lg font-bold" style={{ color: 'var(--ink)' }}>

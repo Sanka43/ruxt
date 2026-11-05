@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Agent, Task, ChatMessage, Thread, Decision, ActivityItem } from './types';
+import { Agent, Task, ChatMessage, Thread, Decision, ActivityItem, User } from './types';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ChatArea } from './components/chat/ChatArea';
@@ -17,9 +17,19 @@ import { MessagesView } from './components/views/MessagesView';
 import { ThreadsView } from './components/views/ThreadsView';
 import { SettingsView } from './components/views/SettingsView';
 import { ThemeDecor } from './components/common/ThemeDecor';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { initTheme } from './utils/theme';
 
 export function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('ruxt_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
+    return null;
+  });
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activeAgentId, setActiveAgentId] = useState<string>('');
   const [currentView, setCurrentView] = useState<
@@ -38,9 +48,7 @@ export function App() {
   const [activeProvider, setActiveProvider] = useState<string>('simulator');
   const [activeForumHub, setActiveForumHub] = useState<'work' | 'decision' | 'fun'>('work');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>(
-    () => localStorage.getItem('ruxt_pref_name') || localStorage.getItem('ruxt_fullname') || 'Kosala'
-  );
+  const [userName, setUserName] = useState<string>(() => currentUser?.name || 'User');
   const [chatWidthPreference, setChatWidthPreference] = useState<string>(
     () => localStorage.getItem('ruxt_chat_width') || 'standard'
   );
@@ -59,7 +67,7 @@ export function App() {
         authorName: 'Numbers Agent',
         authorAvatar: '📊',
         authorRole: 'Spreadsheet agent',
-        title: 'Apple Numbers financial sheet generated for Kosala',
+        title: 'Apple Numbers financial model generated for Workspace',
         body: 'Built multi-year projection model with dynamic margin curves. The workbook includes full revenue breakdown and cash flow reconciliation.',
         score: 4,
         replies: [
@@ -158,6 +166,57 @@ export function App() {
       : chatWidthPreference === 'fluid'
       ? 'max-w-none'
       : 'max-w-3xl';
+
+  // Authenticate session on startup
+  useEffect(() => {
+    const token = localStorage.getItem('ruxt_auth_token');
+    if (!token) {
+      setIsAuthChecking(false);
+      return;
+    }
+
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok && data.user) {
+          setCurrentUser(data.user);
+          setUserName(data.user.name);
+          localStorage.setItem('ruxt_user', JSON.stringify(data.user));
+        } else {
+          localStorage.removeItem('ruxt_auth_token');
+          localStorage.removeItem('ruxt_user');
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => {
+        const saved = localStorage.getItem('ruxt_user');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setCurrentUser(parsed);
+            setUserName(parsed.name);
+          } catch (_) {}
+        }
+      })
+      .finally(() => {
+        setIsAuthChecking(false);
+      });
+  }, []);
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem('ruxt_auth_token');
+    if (token) {
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {});
+    }
+    localStorage.removeItem('ruxt_auth_token');
+    localStorage.removeItem('ruxt_user');
+    setCurrentUser(null);
+  };
 
   // Initialize theme on mount
   useEffect(() => {
@@ -392,6 +451,29 @@ export function App() {
 
   const activeAgent = agents.find((a) => a.id === activeAgentId) || null;
 
+  if (isAuthChecking) {
+    return (
+      <div
+        className="min-h-screen w-full flex flex-col items-center justify-center space-y-3 select-none"
+        style={{ backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+      >
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-[11px] font-mono tracking-wider opacity-70">INITIALIZING RUXT WORKSPACE...</span>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <AuthScreen
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setUserName(user.name);
+        }}
+      />
+    );
+  }
+
   return (
     <div
       className="flex h-screen w-screen overflow-hidden select-none relative"
@@ -440,6 +522,8 @@ export function App() {
           onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
           isFullscreen={isFullscreen}
           onToggleFullscreen={handleToggleFullscreen}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* Dynamic Views */}
@@ -448,6 +532,7 @@ export function App() {
             agents={agents}
             threads={threads}
             recentMessages={messages}
+            userName={userName}
             onSelectAgent={(id) => {
               setActiveAgentId(id);
               setCurrentView('workspace');
@@ -481,6 +566,7 @@ export function App() {
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
+            userName={userName}
           />
         ) : currentView === 'forum' ? (
           <ThreadsView
@@ -496,8 +582,13 @@ export function App() {
           />
         ) : currentView === 'settings' ? (
           <SettingsView
-            onProfileUpdated={(name) => setUserName(name)}
+            onProfileUpdated={(name) => {
+              setUserName(name);
+              if (currentUser) setCurrentUser({ ...currentUser, name });
+            }}
             activities={activities}
+            currentUser={currentUser}
+            onLogout={handleLogout}
           />
         ) : currentView === 'studio' ? (
           <AgentStudio

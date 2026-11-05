@@ -1,6 +1,6 @@
 import React from 'react';
-import { Agent } from '../../types';
-import { Columns, Terminal, Zap, Maximize2, Minimize2, PanelLeftOpen, PanelLeftClose, Settings as SettingsIcon } from 'lucide-react';
+import { Agent, User } from '../../types';
+import { Columns, Terminal, Zap, Maximize2, Minimize2, PanelLeftOpen, PanelLeftClose, Settings as SettingsIcon, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   agent: Agent | null;
@@ -15,6 +15,8 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  currentUser?: User | null;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,7 +31,9 @@ export const Header: React.FC<HeaderProps> = ({
   isSidebarCollapsed,
   onToggleSidebar,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  currentUser,
+  onLogout
 }) => {
   const getPageTitle = () => {
     switch (currentView) {
@@ -219,6 +223,39 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
+        )}
+
+        {/* User Profile & Logout */}
+        {currentUser && (
+          <div className="flex items-center space-x-1.5 pl-1.5 sm:pl-2 border-l" style={{ borderColor: 'var(--line)' }}>
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 select-none shadow-xs border"
+              style={{
+                backgroundColor: 'var(--accent-soft)',
+                borderColor: 'var(--line)',
+                color: 'var(--accent)'
+              }}
+              title={`${currentUser.name} (${currentUser.email})`}
+            >
+              {currentUser.avatar || currentUser.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="hidden xl:inline text-xs font-semibold max-w-[110px] truncate" style={{ color: 'var(--ink)' }}>
+              {currentUser.name}
+            </span>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-1.5 rounded-lg border hover:opacity-85 transition cursor-pointer text-rose-500"
+                style={{
+                  borderColor: 'var(--line)',
+                  backgroundColor: 'color-mix(in srgb, var(--surface) 90%, var(--bg))'
+                }}
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </header>

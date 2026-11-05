@@ -7,6 +7,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { agentService } from './services/agent.service.js';
 import { taskService } from './services/task.service.js';
+import { authService } from './services/auth.service.js';
 import { providerHub, ProviderId } from './providers/provider.hub.js';
 import { geminiProvider } from './providers/gemini.provider.js';
 import { ollamaProvider } from './providers/ollama.provider.js';
@@ -99,6 +100,69 @@ fastify.get('/ws', { websocket: true }, (connection: any) => {
       console.log(`[RuXt Host] Tunnel client disconnected (Remaining: ${tunnelClients.size})`);
     }
   });
+});
+
+// Helper to parse Bearer token from request
+function getBearerToken(request: any): string | null {
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  return authHeader.substring(7).trim();
+}
+
+// Authentication Endpoints
+fastify.post('/api/auth/register', async (request, reply) => {
+  try {
+    const { name, email, password } = request.body as any;
+    const result = await authService.register(name, email, password);
+    return { ok: true, ...result };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message || 'Registration failed' });
+  }
+});
+
+fastify.post('/api/auth/login', async (request, reply) => {
+  try {
+    const { email, password } = request.body as any;
+    const result = await authService.login(email, password);
+    return { ok: true, ...result };
+  } catch (err: any) {
+    return reply.status(401).send({ ok: false, error: err.message || 'Invalid credentials' });
+  }
+});
+
+fastify.get('/api/auth/me', async (request, reply) => {
+  const token = getBearerToken(request);
+  if (!token) {
+    return reply.status(401).send({ ok: false, error: 'Unauthorized' });
+  }
+  const user = await authService.getUserByToken(token);
+  if (!user) {
+    return reply.status(401).send({ ok: false, error: 'Invalid or expired session' });
+  }
+  return { ok: true, user };
+});
+
+fastify.post('/api/auth/logout', async (request) => {
+  const token = getBearerToken(request);
+  if (token) {
+    await authService.logout(token);
+  }
+  return { ok: true };
+});
+
+fastify.put('/api/auth/profile', async (request, reply) => {
+  const token = getBearerToken(request);
+  if (!token) return reply.status(401).send({ ok: false, error: 'Unauthorized' });
+  const user = await authService.getUserByToken(token);
+  if (!user) return reply.status(401).send({ ok: false, error: 'Unauthorized' });
+
+  try {
+    const body = request.body as any;
+    const updated = await authService.updateProfile(user.id, body);
+    return { ok: true, user: updated };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message });
+  }
 });
 
 // REST API Endpoints
@@ -318,6 +382,7 @@ const isSocket = rawPort && isNaN(Number(rawPort));
 async function bootstrap() {
   try {
     await agentService.ensureSeedAgents();
+    await authService.ensureAdminUser();
     
     if (isSocket && rawPort) {
       await fastify.listen({ path: rawPort });

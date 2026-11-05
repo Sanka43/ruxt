@@ -9,6 +9,7 @@ interface MessagesViewProps {
   messages: ChatMessage[];
   onSendMessage: (prompt: string) => void;
   isLoading?: boolean;
+  userName?: string;
 }
 
 export const MessagesView: React.FC<MessagesViewProps> = ({
@@ -17,7 +18,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   onSelectAgent,
   messages,
   onSendMessage,
-  isLoading = false
+  isLoading = false,
+  userName = 'You'
 }) => {
   const [inputText, setInputText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -207,7 +209,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                     }
                   >
                     <div className="flex items-center justify-between text-[10px] mb-1 opacity-75">
-                      <span className="font-semibold">{isUser ? 'Kosala' : selectedAgent?.name}</span>
+                      <span className="font-semibold">{isUser ? userName : selectedAgent?.name}</span>
                       <span>
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>

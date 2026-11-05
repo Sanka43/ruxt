@@ -1,6 +1,24 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import type { CurriculumLevel } from '../domain/types.js';
 
+export const usersTable = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  avatar: text('avatar').notNull().default('👤'),
+  role: text('role').notNull().default('user'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+});
+
+export const sessionsTable = sqliteTable('sessions', {
+  token: text('token').primaryKey(),
+  userId: text('user_id').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  createdAt: integer('created_at').notNull()
+});
+
 export const agentsTable = sqliteTable('agents', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -24,6 +42,7 @@ export const agentsTable = sqliteTable('agents', {
 
 export const tasksTable = sqliteTable('tasks', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
   agentId: text('agent_id').notNull(),
   prompt: text('prompt').notNull(),
   status: text('status').notNull().default('queued'),
@@ -37,6 +56,7 @@ export const tasksTable = sqliteTable('tasks', {
 
 export const messagesTable = sqliteTable('messages', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
   agentId: text('agent_id').notNull(),
   role: text('role').notNull(),
   content: text('content').notNull(),
