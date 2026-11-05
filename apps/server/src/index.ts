@@ -10,6 +10,7 @@ import { taskService } from './services/task.service.js';
 import { providerHub, ProviderId } from './providers/provider.hub.js';
 import { geminiProvider } from './providers/gemini.provider.js';
 import { ollamaProvider } from './providers/ollama.provider.js';
+import { openAIProvider } from './providers/openai.provider.js';
 import type { WebSocket } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -227,6 +228,10 @@ fastify.post('/api/providers/configure', async (request, reply) => {
     geminiProvider.setApiKey(body.apiKey, body.model);
     return { ok: true, provider: 'gemini', configured: geminiProvider.isConfigured() };
   }
+  if (body?.provider === 'openai') {
+    openAIProvider.setApiKey(body.apiKey, body.model);
+    return { ok: true, provider: 'openai', configured: openAIProvider.isConfigured() };
+  }
   if (body?.provider === 'ollama') {
     ollamaProvider.setEndpoint(body.endpoint || 'http://localhost:11434', body.model);
     return { ok: true, provider: 'ollama' };
@@ -238,6 +243,10 @@ fastify.post('/api/providers/test', async (request) => {
   const body = request.body as { provider: string };
   if (body?.provider === 'gemini') {
     const test = await geminiProvider.testConnection();
+    return test;
+  }
+  if (body?.provider === 'openai') {
+    const test = await openAIProvider.testConnection();
     return test;
   }
   if (body?.provider === 'ollama') {

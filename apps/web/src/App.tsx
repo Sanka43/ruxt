@@ -610,6 +610,7 @@ export function App() {
                     onSendMessage={handleSendMessage}
                     isLoading={isLoading}
                     chatWidthClass={chatWidthClass}
+                    onClearHistory={() => setMessages([])}
                   />
                 )}
               </div>

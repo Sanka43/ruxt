@@ -123,6 +123,25 @@ export class AgentService {
         isBuiltin: true,
         isInstalled: true,
         createdAt: Date.now()
+      },
+      {
+        id: 'agent_alex_rivera',
+        name: 'Alex Rivera',
+        slug: 'alex-rivera',
+        role: 'Full-stack & Cloud Architect',
+        description: 'Elite software engineer specializing in scalable TypeScript, React 19, distributed backend systems, and automated cloud deployments.',
+        avatar: '⚡',
+        systemPrompt: 'You are Alex Rivera, an elite full-stack software engineer and cloud architect. Provide concise, production-ready code with best practices, architecture blueprints, and clean debugging insights.',
+        canvasType: 'none',
+        skills: ['TypeScript & React 19', 'Fastify & Node.js Systems', 'Docker & Cloud CI/CD', 'Database Optimization & Drizzle ORM'],
+        domain: 'code',
+        strictGuardrails: false,
+        targetLegendLevel: 'Principal Cloud & Systems Architect',
+        curriculum: [],
+        specializedKnowledge: ['Microservices & Event-Driven Architecture', 'High-Throughput WebSockets', 'OAuth2 & Cryptographic Security', 'Kubernetes & Edge Deployments'],
+        isBuiltin: true,
+        isInstalled: true,
+        createdAt: Date.now()
       }
     ];
 
@@ -131,6 +150,12 @@ export class AgentService {
         await db.insert(agentsTable).values(agent as any);
       }
     } else {
+      // Ensure Alex Rivera is seeded if not present
+      const hasAlex = existing.some((a) => a.id === 'agent_alex_rivera');
+      if (!hasAlex) {
+        const alex = initialAgents.find((a) => a.id === 'agent_alex_rivera');
+        if (alex) await db.insert(agentsTable).values(alex as any);
+      }
       // Upgrade existing Elena Voss agent to ensure latest curriculum & guardrails
       const elena = existing.find((a) => a.id === 'agent_elena_voss');
       if (elena) {

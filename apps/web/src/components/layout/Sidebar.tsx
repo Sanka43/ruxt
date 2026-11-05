@@ -31,17 +31,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const installedAgents = agents.filter((a) => a.isInstalled);
 
+  const handleNavView = (view: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace') => {
+    onSelectView(view);
+    if (window.innerWidth < 768 && onToggleCollapse && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
+
+  const handleNavAgent = (id: string) => {
+    onSelectAgent(id);
+    if (window.innerWidth < 768 && onToggleCollapse && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
+
   return (
-    <aside
-      style={{
-        backgroundColor: 'var(--sidebar)',
-        color: 'var(--sidebar-text)',
-        borderColor: 'var(--sidebar-line)'
-      }}
-      className={`${
-        isCollapsed ? 'w-16' : 'w-60'
-      } border-r flex flex-col justify-between select-none transition-all duration-300 shrink-0 z-20`}
-    >
+    <>
+      {/* Mobile Backdrop */}
+      {!isCollapsed && (
+        <div
+          onClick={onToggleCollapse}
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-xs transition-opacity"
+        />
+      )}
+
+      <aside
+        style={{
+          backgroundColor: 'var(--sidebar)',
+          color: 'var(--sidebar-text)',
+          borderColor: 'var(--sidebar-line)'
+        }}
+        className={`${
+          isCollapsed
+            ? 'hidden md:flex md:w-16'
+            : 'fixed inset-y-0 left-0 w-64 z-40 md:relative md:w-60 md:z-20 shadow-2xl md:shadow-none'
+        } border-r flex flex-col justify-between select-none transition-all duration-300 shrink-0 h-full`}
+      >
       {/* Brand & Logo Header */}
       <div
         className={`p-3 border-b flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}
@@ -53,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               src="/ruxt-logo.png"
               alt="ruxt"
               className="ruxt-lockup cursor-pointer hover:opacity-95 transition shadow-xs"
-              onClick={() => onSelectView('home')}
+              onClick={() => handleNavView('home')}
             />
             <div className="flex items-center space-x-1 text-[9px] font-mono tracking-wider text-emerald-400">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -62,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           <div
-            onClick={() => onSelectView('home')}
+            onClick={() => handleNavView('home')}
             className="w-10 h-10 rounded-xl flex items-center justify-center text-white cursor-pointer font-bold text-lg shadow-sm"
             style={{ backgroundColor: 'var(--ruxt)' }}
             title="RuXt Next-Gen"
@@ -94,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* 1. Home */}
           <button
-            onClick={() => onSelectView('home')}
+            onClick={() => handleNavView('home')}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
             } rounded-lg text-xs font-semibold transition ${
@@ -117,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* 2. AI Agents */}
           <button
-            onClick={() => onSelectView('agents')}
+            onClick={() => handleNavView('agents')}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
             } rounded-lg text-xs font-semibold transition ${
@@ -148,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* 3. Messages */}
           <button
-            onClick={() => onSelectView('messages')}
+            onClick={() => handleNavView('messages')}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
             } rounded-lg text-xs font-semibold transition ${
@@ -179,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* 4. Threads / Forum */}
           <button
-            onClick={() => onSelectView('forum')}
+            onClick={() => handleNavView('forum')}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
             } rounded-lg text-xs font-semibold transition ${
@@ -210,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* 5. Settings */}
           <button
-            onClick={() => onSelectView('settings')}
+            onClick={() => handleNavView('settings')}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
             } rounded-lg text-xs font-semibold transition ${
@@ -246,8 +271,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={agent.id}
                   onClick={() => {
-                    onSelectAgent(agent.id);
-                    onSelectView('workspace');
+                    handleNavAgent(agent.id);
+                    handleNavView('workspace');
                   }}
                   title={`${agent.name} (${agent.role})`}
                   className={`w-full flex items-center ${
@@ -297,7 +322,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
           <div className="space-y-0.5">
             <button
-              onClick={() => onSelectView('studio')}
+              onClick={() => handleNavView('studio')}
               title="Admin Agent Studio"
               className={`w-full flex items-center ${
                 isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-1.5'
@@ -317,7 +342,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <button
-              onClick={() => onSelectView('marketplace')}
+              onClick={() => handleNavView('marketplace')}
               title="Agent Marketplace"
               className={`w-full flex items-center ${
                 isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-1.5'
@@ -380,7 +405,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Profile */}
             <div
-              onClick={() => onSelectView('settings')}
+              onClick={() => handleNavView('settings')}
               className="rounded-lg p-1.5 flex items-center space-x-2.5 cursor-pointer hover:bg-white/5 transition"
               title="Open Profile Settings"
             >
@@ -401,5 +426,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
     </aside>
+    </>
   );
 };

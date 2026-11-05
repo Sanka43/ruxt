@@ -148,7 +148,47 @@ ${agent.guardrailRedirectMessage || `I am configured exclusively as a specialist
 - **Data Integrity**: All totals are cross-checked across multi-tab structures. You can review the interactive grid on your left or export as CSV/Excel.`;
     }
 
-    // 5. Custom Agent Default
+    // 5. Code & Cloud Architecture (Alex Rivera)
+    if (agent.domain === 'code' || agent.slug === 'alex-rivera') {
+      return `Here is the architectural blueprint and production-grade implementation for:
+**"${prompt}"**
+
+### 1. Architectural Strategy
+- **Layer Separation**: Clean separation of Domain entities, Service orchestrators, and Transport layers (Fastify REST + WebSockets).
+- **Concurrency & Resilience**: Non-blocking asynchronous I/O with circuit breakers, idempotent retry policies, and structured schema validations.
+- **Observability**: Structured JSON telemetry logs with correlation IDs for seamless tracing.
+
+### 2. Implementation Pattern
+\`\`\`typescript
+export interface ServiceContext<T> {
+  readonly traceId: string;
+  readonly timestamp: number;
+  readonly payload: T;
+}
+
+export async function processTaskStream<T, R>(
+  context: ServiceContext<T>,
+  handler: (item: T) => Promise<R>
+): Promise<R> {
+  const start = performance.now();
+  try {
+    const result = await handler(context.payload);
+    return result;
+  } catch (error) {
+    console.error(\`[Error \${context.traceId}]\`, error);
+    throw error;
+  }
+}
+\`\`\`
+
+### 3. Production Hardening Checklist
+- [x] Zero-downtime rolling restart compatibility
+- [x] Environment secrets managed via secure vault / TLS 1.3
+- [x] Database connection pooling with automatic backpressure management
+- [x] Comprehensive error boundaries wrapping asynchronous handlers`;
+    }
+
+    // 6. Custom Agent Default
     return `I am ${agent.name}, operating as your dedicated ${agent.role}.
 Persona System Directives: "${agent.systemPrompt}"
 Task Processed: "${prompt}".

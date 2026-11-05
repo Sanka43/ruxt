@@ -1,6 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Agent, ChatMessage } from '../../types';
-import { Send, Sparkles, Shield, Award, BookOpen, Check, Copy, Clock, ArrowRight } from 'lucide-react';
+import {
+  Send,
+  Sparkles,
+  Shield,
+  Award,
+  BookOpen,
+  Check,
+  Copy,
+  Clock,
+  ArrowRight,
+  Download,
+  Trash2,
+  Cpu,
+  Layers
+} from 'lucide-react';
 import { MarkdownContent } from './MarkdownContent';
 
 interface ChatAreaProps {
@@ -11,6 +25,7 @@ interface ChatAreaProps {
   onSendMessage: (prompt: string) => void;
   isLoading: boolean;
   chatWidthClass?: string;
+  onClearHistory?: () => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -20,7 +35,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   streamingTaskId,
   onSendMessage,
   isLoading,
-  chatWidthClass = 'max-w-3xl'
+  chatWidthClass = 'max-w-3xl',
+  onClearHistory
 }) => {
   const [input, setInput] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -43,13 +59,44 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleExportChat = () => {
+    if (messages.length === 0) return;
+    let markdown = `# Chat Transcript with ${agent.name} (${agent.role})\n`;
+    markdown += `Generated: ${new Date().toLocaleString()}\n`;
+    markdown += `Agent Domain: ${agent.domain || 'general'}\n\n---\n\n`;
+
+    messages.forEach((m) => {
+      const sender = m.role === 'user' ? 'You' : agent.name;
+      const time = new Date(m.createdAt).toLocaleTimeString();
+      markdown += `### ${sender} (${time})\n\n${m.content}\n\n---\n\n`;
+    });
+
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-${agent.slug}-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClear = async () => {
+    if (!window.confirm(`Clear entire conversation history with ${agent.name}?`)) return;
+    try {
+      await fetch(`/api/chat/${agent.id}`, { method: 'DELETE' });
+      onClearHistory?.();
+    } catch (err) {
+      console.error('Failed to clear chat:', err);
+    }
+  };
+
   const samplePrompts = () => {
     if (agent.domain === 'chess' || agent.slug === 'elena-voss') {
       return [
         'How do I reach Chess Legend level from my current rating?',
         'Analyze my opening repertoire: Sicilian Defense vs 1. e4',
         'Teach me Mikhail Tal dynamic sacrifice intuition',
-        'Explain the Lucena position and building the bridge'
+        'Explain the Lucena position and building the bridge in rook endgames'
       ];
     }
     if (agent.slug === 'noah-reed' || agent.domain === 'compliance') {
@@ -66,6 +113,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         'Build dynamic formulas for budget variance tracking'
       ];
     }
+    if (agent.slug === 'alex-rivera' || agent.domain === 'code') {
+      return [
+        'Design a scalable event-driven TypeScript architecture',
+        'Build a resilient Fastify WebSocket streaming server',
+        'Audit SQL performance and drizzle-orm query indexing',
+        'Write automated unit and integration tests with vitest'
+      ];
+    }
     return ['What tasks are within your assigned domain?', 'Run a specialized analysis on my project'];
   };
 
@@ -77,6 +132,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         color: 'var(--ink)'
       }}
     >
+      {/* Top Chat Toolbar (Export, Clear, Agent Info) */}
+      <div
+        className="h-10 px-4 border-b flex items-center justify-between text-xs shrink-0 select-none"
+        style={{
+          borderColor: 'var(--line)',
+          backgroundColor: 'color-mix(in srgb, var(--surface) 90%, var(--bg))'
+        }}
+      >
+        <div className="flex items-center space-x-2 truncate">
+          <span className="font-semibold">{agent.name}</span>
+          <span className="text-[11px] opacity-60 truncate hidden sm:inline">• {agent.role}</span>
+        </div>
+
+        <div className="flex items-center space-x-1.5">
+          {messages.length > 0 && (
+            <>
+              <button
+                onClick={handleExportChat}
+                className="flex items-center space-x-1 px-2 py-1 rounded-md border hover:opacity-85 transition cursor-pointer"
+                style={{ borderColor: 'var(--line)', backgroundColor: 'var(--surface)' }}
+                title="Export chat transcript as Markdown"
+              >
+                <Download className="w-3 h-3" />
+                <span className="hidden md:inline">Export MD</span>
+              </button>
+
+              <button
+                onClick={handleClear}
+                className="flex items-center space-x-1 px-2 py-1 rounded-md border hover:opacity-85 transition cursor-pointer text-rose-500"
+                style={{ borderColor: 'var(--line)', backgroundColor: 'var(--surface)' }}
+                title="Clear chat history"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span className="hidden md:inline">Clear</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Messages stream */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4">
         <div className={`${chatWidthClass} mx-auto w-full space-y-4`}>
@@ -162,7 +257,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     <button
                       key={idx}
                       onClick={() => onSendMessage(p)}
-                      className="group w-full flex items-center justify-between text-left text-xs px-3.5 py-2.5 rounded-xl border transition-all shadow-xs hover:shadow-sm"
+                      className="group w-full flex items-center justify-between text-left text-xs px-3.5 py-2.5 rounded-xl border transition-all shadow-xs hover:shadow-sm cursor-pointer"
                       style={{
                         backgroundColor: 'var(--surface)',
                         borderColor: 'var(--line)',
@@ -245,7 +340,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           </div>
                           <button
                             onClick={() => handleCopy(msg.id, msg.content)}
-                            className="flex items-center space-x-1 px-1.5 py-0.5 rounded transition hover:opacity-80"
+                            className="flex items-center space-x-1 px-1.5 py-0.5 rounded transition hover:opacity-80 cursor-pointer"
                             style={{ backgroundColor: 'color-mix(in srgb, var(--bg) 70%, var(--surface))' }}
                             title="Copy reply text"
                           >
@@ -353,7 +448,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition disabled:opacity-40 shadow-xs"
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition disabled:opacity-40 shadow-xs cursor-pointer"
               style={
                 input.trim() && !isLoading
                   ? { backgroundColor: 'var(--ruxt)', color: '#fff' }

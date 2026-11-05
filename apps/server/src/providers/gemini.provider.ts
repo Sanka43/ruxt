@@ -1,4 +1,4 @@
-import { Agent, TaskStep } from '../domain/types.js';
+import { Agent, TaskStep, ChatMessage } from '../domain/types.js';
 
 interface StreamCallbacks {
   onToken?: (token: string) => void;
@@ -11,7 +11,7 @@ export class GeminiProvider {
   private defaultModel: string;
 
   constructor(apiKey = process.env.GEMINI_API_KEY || '', defaultModel = 'gemini-1.5-flash') {
-    this.apiKey = apiKey;
+    this.apiKey = apiKey.trim();
     this.defaultModel = defaultModel;
   }
 
@@ -24,6 +24,10 @@ export class GeminiProvider {
     return this.apiKey;
   }
 
+  getDefaultModel(): string {
+    return this.defaultModel;
+  }
+
   isConfigured(): boolean {
     return Boolean(this.apiKey && this.apiKey.length > 5);
   }
@@ -34,17 +38,23 @@ export class GeminiProvider {
     }
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
-        return { ok: true, message: 'Successfully connected to Google Gemini API.' };
+        return { ok: true, message: 'Successfully connected to Google Gemini API (Gemini Pro/Flash ready).' };
       }
       return { ok: false, message: `Google Gemini returned HTTP ${res.status}` };
     } catch (e: any) {
-      return { ok: false, message: e.message || 'Connection timeout' };
+      return { ok: false, message: e.message || 'Connection timeout to Google Gemini' };
     }
   }
 
-  async runTask(agent: Agent, prompt: string, callbacks: StreamCallbacks, modelName?: string): Promise<string> {
+  async runTask(
+    agent: Agent,
+    prompt: string,
+    history: ChatMessage[] = [],
+    callbacks: StreamCallbacks,
+    modelName?: string
+  ): Promise<string> {
     if (!this.isConfigured()) {
       throw new Error('Gemini API key is not configured.');
     }
@@ -52,14 +62,14 @@ export class GeminiProvider {
     const model = modelName || this.defaultModel;
 
     const steps: TaskStep[] = [
-      { id: 'understand', label: 'Preparing Gemini request & persona parameters', status: 'running' },
+      { id: 'understand', label: 'Preparing Gemini context & persona instructions', status: 'running' },
       { id: 'plan', label: `Connecting to Google Cloud (${model})`, status: 'pending' },
       { id: 'execute', label: 'Streaming multi-modal tokens', status: 'pending' },
       { id: 'verify', label: 'Verifying completion and safety filters', status: 'pending' }
     ];
 
     callbacks.onStep?.(steps[0]);
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 120));
     steps[0].status = 'completed';
     callbacks.onStep?.(steps[0]);
 
@@ -79,6 +89,20 @@ Specialized Knowledge: ${(agent.specializedKnowledge || []).join(', ')}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
+    // Multi-turn conversational memory contents
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+    const recent = history.slice(-8);
+    for (const msg of recent) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      });
+    }
+    contents.push({
+      role: 'user',
+      parts: [{ text: prompt }]
+    });
+
     let fullText = '';
 
     try {
@@ -89,12 +113,7 @@ Specialized Knowledge: ${(agent.specializedKnowledge || []).join(', ')}`;
           system_instruction: {
             parts: [{ text: systemInstruction }]
           },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: prompt }]
-            }
-          ]
+          contents
         })
       });
 
@@ -135,15 +154,14 @@ Specialized Knowledge: ${(agent.specializedKnowledge || []).join(', ')}`;
 
       steps[3].status = 'running';
       callbacks.onStep?.(steps[3]);
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => setTimeout(r, 100));
       steps[3].status = 'completed';
       callbacks.onStep?.(steps[3]);
 
-      callbacks.onComplete?.(fullText, { provider: 'gemini', model });
+      callbacks.onComplete?.(fullText);
       return fullText;
     } catch (err: any) {
       steps[2].status = 'failed';
-      steps[2].detail = err.message;
       callbacks.onStep?.(steps[2]);
       throw err;
     }

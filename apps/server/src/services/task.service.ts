@@ -90,11 +90,14 @@ export class TaskService {
     });
     broadcast('task:started', task);
 
-    // Run through Active Provider (Ollama / Gemini / Simulator)
+    // Fetch prior conversation history for multi-turn contextual memory
+    const priorHistory = await this.getChatHistory(agent.id);
+
+    // Run through Active Provider (OpenAI / Gemini / Ollama / Simulator)
     let accumulatedTokens = '';
     const assistantMsgId = `msg_${Date.now()}_a`;
 
-    await providerHub.runTask(agent, prompt, {
+    await providerHub.runTask(agent, prompt, priorHistory, {
       onStep: (step) => {
         const found = task.steps.find((s) => s.id === step.id);
         if (found) {

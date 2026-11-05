@@ -157,6 +157,8 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'Simulated Engine'
               : activeProvider === 'gemini'
               ? 'Gemini Pro'
+              : activeProvider === 'openai'
+              ? 'OpenAI GPT-4o'
               : activeProvider === 'ollama'
               ? 'Local Ollama'
               : activeProvider}

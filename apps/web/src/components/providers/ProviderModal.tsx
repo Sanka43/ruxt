@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Zap, Cpu, Key, Radio, CheckCircle2, AlertCircle, RefreshCw, Terminal, Check } from 'lucide-react';
+import {
+  X,
+  Zap,
+  Cpu,
+  Key,
+  Radio,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Terminal,
+  Bot,
+  Sparkles,
+  ShieldCheck,
+  ExternalLink
+} from 'lucide-react';
 import { ProviderStatus } from '../../types';
 
 interface ProviderModalProps {
@@ -17,16 +31,48 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
 }) => {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [loading, setLoading] = useState(false);
-  const [geminiKey, setGeminiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState('gemini-1.5-flash');
+
+  // Gemini state
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('ruxt_gemini_key') || '');
+  const [geminiModel, setGeminiModel] = useState(() => localStorage.getItem('ruxt_gemini_model') || 'gemini-1.5-flash');
+
+  // OpenAI state
+  const [openAIKey, setOpenAIKey] = useState(() => localStorage.getItem('ruxt_openai_key') || '');
+  const [openAIModel, setOpenAIModel] = useState(() => localStorage.getItem('ruxt_openai_model') || 'gpt-4o-mini');
+
+  // Ollama state
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [ollamaModel, setOllamaModel] = useState('llama3');
+
   const [testResult, setTestResult] = useState<{ [key: string]: { ok: boolean; message: string } }>({});
   const [testingId, setTestingId] = useState<string | null>(null);
 
-  // Tunnel test
+  // Tunnel state
   const [tunnelTestOutput, setTunnelTestOutput] = useState<string | null>(null);
   const [isTunnelExecuting, setIsTunnelExecuting] = useState(false);
+
+  // Auto-restore saved keys on mount
+  useEffect(() => {
+    const savedGemini = localStorage.getItem('ruxt_gemini_key');
+    const savedGeminiModel = localStorage.getItem('ruxt_gemini_model') || 'gemini-1.5-flash';
+    if (savedGemini) {
+      fetch('/api/providers/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'gemini', apiKey: savedGemini, model: savedGeminiModel })
+      }).catch(() => {});
+    }
+
+    const savedOpenAI = localStorage.getItem('ruxt_openai_key');
+    const savedOpenAIModel = localStorage.getItem('ruxt_openai_model') || 'gpt-4o-mini';
+    if (savedOpenAI) {
+      fetch('/api/providers/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'openai', apiKey: savedOpenAI, model: savedOpenAIModel })
+      }).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -69,18 +115,20 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
   const handleSaveGemini = async () => {
     setTestingId('gemini');
     try {
+      localStorage.setItem('ruxt_gemini_key', geminiKey.trim());
+      localStorage.setItem('ruxt_gemini_model', geminiModel);
+
       const res = await fetch('/api/providers/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: 'gemini',
-          apiKey: geminiKey,
+          apiKey: geminiKey.trim(),
           model: geminiModel
         })
       });
       const data = await res.json();
       if (data.ok) {
-        // Run test
         const testRes = await fetch('/api/providers/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,10 +136,49 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
         });
         const testData = await testRes.json();
         setTestResult((prev) => ({ ...prev, gemini: testData }));
+        if (testData.ok) {
+          handleSetActive('gemini');
+        }
         fetchProviders();
       }
     } catch (err: any) {
       setTestResult((prev) => ({ ...prev, gemini: { ok: false, message: err.message } }));
+    } finally {
+      setTestingId(null);
+    }
+  };
+
+  const handleSaveOpenAI = async () => {
+    setTestingId('openai');
+    try {
+      localStorage.setItem('ruxt_openai_key', openAIKey.trim());
+      localStorage.setItem('ruxt_openai_model', openAIModel);
+
+      const res = await fetch('/api/providers/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'openai',
+          apiKey: openAIKey.trim(),
+          model: openAIModel
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const testRes = await fetch('/api/providers/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'openai' })
+        });
+        const testData = await testRes.json();
+        setTestResult((prev) => ({ ...prev, openai: testData }));
+        if (testData.ok) {
+          handleSetActive('openai');
+        }
+        fetchProviders();
+      }
+    } catch (err: any) {
+      setTestResult((prev) => ({ ...prev, openai: { ok: false, message: err.message } }));
     } finally {
       setTestingId(null);
     }
@@ -119,29 +206,29 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
       setTestResult((prev) => ({ ...prev, ollama: data }));
       fetchProviders();
     } catch (err: any) {
-      setTestResult((prev) => ({ ...prev, ollama: { ok: false, message: err.message } }));
+      setTestResult((prev) => ({ ...prev, ollama: { ok: false, message: 'Could not connect to Ollama server' } }));
     } finally {
       setTestingId(null);
     }
   };
 
-  const handleTestTunnelExec = async () => {
+  const handleExecuteTunnelTest = async () => {
     setIsTunnelExecuting(true);
     setTunnelTestOutput(null);
     try {
       const res = await fetch('/api/tunnel/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'echo "RuXt Outbound Tunnel is operational on $(date)"' })
+        body: JSON.stringify({ command: 'echo "RuXt Local Bridge Ping OK"' })
       });
       const data = await res.json();
       if (data.ok && data.result) {
-        setTunnelTestOutput(data.result.stdout || 'Command completed successfully');
+        setTunnelTestOutput(data.result.stdout || 'Bridge responded successfully.');
       } else {
-        setTunnelTestOutput(data.error || 'Failed to execute command over tunnel');
+        setTunnelTestOutput(data.error || 'No response from local tunnel client.');
       }
     } catch (err: any) {
-      setTunnelTestOutput(`Error: ${err.message}`);
+      setTunnelTestOutput(`Execution failed: ${err.message}`);
     } finally {
       setIsTunnelExecuting(false);
     }
@@ -150,197 +237,233 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div
-        className="w-full max-w-2xl bg-[#0E131F] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors"
+        style={{
+          backgroundColor: 'var(--surface)',
+          borderColor: 'var(--line)',
+          color: 'var(--ink)'
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-              <Cpu className="w-5 h-5" />
+        {/* Modal Header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+          style={{ borderColor: 'var(--line)' }}
+        >
+          <div className="flex items-center space-x-2.5">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center border shadow-xs"
+              style={{
+                backgroundColor: 'var(--accent-soft)',
+                borderColor: 'var(--line)',
+                color: 'var(--accent)'
+              }}
+            >
+              <Zap className="w-4 h-4 fill-current" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">AI Engine & Model Providers</h2>
-              <p className="text-xs text-slate-400">
-                Switch between zero-setup simulation, local neural models, and cloud API endpoints
+              <h2 className="text-sm sm:text-base font-bold tracking-tight">AI Engines & Model Providers</h2>
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                Switch between zero-setup offline simulation, Gemini, or OpenAI GPT-4o.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-surface hover:bg-white/10 text-slate-400 hover:text-white transition"
+            className="p-1.5 rounded-lg border hover:opacity-80 transition cursor-pointer"
+            style={{ borderColor: 'var(--line)' }}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Provider Cards */}
-        <div className="space-y-4">
-          {/* 1. Simulator */}
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-4">
+          {/* Active Provider Pill Banner */}
           <div
-            className={`p-4 rounded-xl border transition ${
-              activeProvider === 'simulator'
-                ? 'bg-indigo-950/20 border-indigo-500/50'
-                : 'bg-black/30 border-white/5 hover:border-white/10'
-            }`}
+            className="p-3 rounded-xl border flex items-center justify-between text-xs"
+            style={{
+              backgroundColor: 'var(--accent-soft)',
+              borderColor: 'color-mix(in srgb, var(--accent) 30%, var(--line))',
+              color: 'var(--accent)'
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-semibold">
+                Current Active Engine:{' '}
+                <span className="uppercase tracking-wider font-mono">
+                  {activeProvider === 'simulator'
+                    ? 'Built-in Simulation Engine'
+                    : activeProvider === 'gemini'
+                    ? 'Google Gemini Cloud'
+                    : activeProvider === 'openai'
+                    ? 'OpenAI GPT-4o'
+                    : activeProvider === 'ollama'
+                    ? 'Local Ollama'
+                    : activeProvider}
+                </span>
+              </span>
+            </div>
+            <span className="text-[11px] opacity-80">BYOK Protected</span>
+          </div>
+
+          {/* 1. Built-in Simulation Engine */}
+          <div
+            className="p-4 rounded-xl border transition"
+            style={{
+              borderColor: activeProvider === 'simulator' ? 'var(--accent)' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'simulator'
+                  ? 'color-mix(in srgb, var(--accent-soft) 40%, var(--surface))'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                  <Zap className="w-4 h-4" />
+                <div
+                  className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 mt-0.5"
+                  style={{
+                    backgroundColor: 'var(--accent-soft)',
+                    borderColor: 'var(--line)',
+                    color: 'var(--accent)'
+                  }}
+                >
+                  <Bot className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-semibold text-white">Zero-Setup Simulation Engine</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
-                      Always Ready
+                    <h3 className="text-sm font-semibold">Built-in Simulation Engine</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-medium border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                      Zero-Setup • Offline
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Instant sub-second token streaming with domain guardrails, chess master intelligence, and automated tool reasoning. No API keys required.
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Instant sub-second token streaming with domain guardrails, chess coach intelligence, and financial spreadsheet reasoning. No API key required.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => handleSetActive('simulator')}
                 disabled={activeProvider === 'simulator'}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                style={
                   activeProvider === 'simulator'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-surface hover:bg-white/10 text-slate-300'
-                }`}
+                    ? { backgroundColor: 'var(--accent)', color: '#fff' }
+                    : { borderColor: 'var(--line)', borderWidth: 1 }
+                }
               >
-                {activeProvider === 'simulator' ? 'Active Engine' : 'Activate'}
+                {activeProvider === 'simulator' ? 'Active' : 'Activate'}
               </button>
             </div>
           </div>
 
-          {/* 2. Local Ollama */}
+          {/* 2. Google Gemini API */}
           <div
-            className={`p-4 rounded-xl border transition ${
-              activeProvider === 'ollama'
-                ? 'bg-indigo-950/20 border-indigo-500/50'
-                : 'bg-black/30 border-white/5 hover:border-white/10'
-            }`}
+            className="p-4 rounded-xl border transition"
+            style={{
+              borderColor: activeProvider === 'gemini' ? 'var(--accent)' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'gemini'
+                  ? 'color-mix(in srgb, var(--accent-soft) 40%, var(--surface))'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
-                  <Cpu className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-semibold text-white">Local Ollama Neural Server</h3>
-                    <span className="text-[10px] text-slate-400 font-mono">http://localhost:11434</span>
+                    <h3 className="text-sm font-semibold">Google Gemini Pro & Flash</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                      Cloud Neural
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Run open-weight neural models on local hardware without cloud data egress.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleSetActive('ollama')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  activeProvider === 'ollama'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-surface hover:bg-white/10 text-slate-300'
-                }`}
-              >
-                {activeProvider === 'ollama' ? 'Active Engine' : 'Activate'}
-              </button>
-            </div>
-
-            <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="sm:col-span-2 flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Model name (e.g. llama3, mistral, deepseek-r1)"
-                  value={ollamaModel}
-                  onChange={(e) => setOllamaModel(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-slate-600 outline-none"
-                />
-              </div>
-              <button
-                onClick={handleTestOllama}
-                disabled={testingId === 'ollama'}
-                className="flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 border border-white/5 transition"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${testingId === 'ollama' ? 'animate-spin' : ''}`} />
-                <span>Test Connection</span>
-              </button>
-            </div>
-
-            {testResult.ollama && (
-              <div
-                className={`mt-2 text-xs flex items-center space-x-1.5 ${
-                  testResult.ollama.ok ? 'text-emerald-400' : 'text-amber-400'
-                }`}
-              >
-                {testResult.ollama.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                <span>{testResult.ollama.message}</span>
-              </div>
-            )}
-          </div>
-
-          {/* 3. Google Gemini API */}
-          <div
-            className={`p-4 rounded-xl border transition ${
-              activeProvider === 'gemini'
-                ? 'bg-indigo-950/20 border-indigo-500/50'
-                : 'bg-black/30 border-white/5 hover:border-white/10'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-semibold text-white">Google Gemini Cloud Models</h3>
-                    <span className="text-[10px] text-amber-400 font-mono">Gemini 1.5/2.0 Flash</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Connect real Google Gemini models with low-latency streaming and high intelligence.
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    High-speed multi-modal neural models from Google AI with multi-turn memory.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => handleSetActive('gemini')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                disabled={activeProvider === 'gemini'}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                style={
                   activeProvider === 'gemini'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-surface hover:bg-white/10 text-slate-300'
-                }`}
+                    ? { backgroundColor: 'var(--accent)', color: '#fff' }
+                    : { borderColor: 'var(--line)', borderWidth: 1 }
+                }
               >
-                {activeProvider === 'gemini' ? 'Active Engine' : 'Activate'}
+                {activeProvider === 'gemini' ? 'Active' : 'Activate'}
               </button>
             </div>
 
-            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+            <div className="mt-3 pt-3 border-t space-y-2.5" style={{ borderColor: 'var(--line)' }}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <input
-                  type="password"
-                  placeholder="Enter Gemini API Key (AIzaSy...)"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  className="sm:col-span-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-slate-600 outline-none"
-                />
+                <div className="sm:col-span-2">
+                  <input
+                    type="password"
+                    placeholder="Enter your Google Gemini API Key (AIza...)"
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none font-mono"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--line)',
+                      color: 'var(--ink)'
+                    }}
+                  />
+                </div>
+                <div>
+                  <select
+                    value={geminiModel}
+                    onChange={(e) => setGeminiModel(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border text-xs outline-none"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--line)',
+                      color: 'var(--ink)'
+                    }}
+                  >
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] inline-flex items-center space-x-1 hover:underline"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  <span>Get a free Gemini API key</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+
                 <button
                   onClick={handleSaveGemini}
                   disabled={testingId === 'gemini' || !geminiKey.trim()}
-                  className="flex items-center justify-center space-x-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition disabled:opacity-50"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'var(--accent)',
+                    color: '#fff'
+                  }}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${testingId === 'gemini' ? 'animate-spin' : ''}`} />
-                  <span>Save & Test Key</span>
+                  <RefreshCw className={`w-3 h-3 ${testingId === 'gemini' ? 'animate-spin' : ''}`} />
+                  <span>Save & Connect</span>
                 </button>
               </div>
+
               {testResult.gemini && (
                 <div
-                  className={`text-xs flex items-center space-x-1.5 ${
-                    testResult.gemini.ok ? 'text-emerald-400' : 'text-amber-400'
+                  className={`text-xs flex items-center space-x-1.5 pt-1 ${
+                    testResult.gemini.ok ? 'text-emerald-500' : 'text-amber-500'
                   }`}
                 >
                   {testResult.gemini.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
@@ -350,46 +473,176 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Outbound Tunnel Companion */}
-          <div className="p-4 rounded-xl border bg-black/30 border-white/5 space-y-3">
+          {/* 3. OpenAI GPT-4o API */}
+          <div
+            className="p-4 rounded-xl border transition"
+            style={{
+              borderColor: activeProvider === 'openai' ? 'var(--accent)' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'openai'
+                  ? 'color-mix(in srgb, var(--accent-soft) 40%, var(--surface))'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
-                  <Radio className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 mt-0.5">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-semibold text-white">Outbound Tunnel Companion Bridge</h3>
-                    <span className="text-[10px] text-cyan-400 font-mono">ws://localhost:1234/ws</span>
+                    <h3 className="text-sm font-semibold">OpenAI GPT-4o & GPT-4o-mini</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                      BYOK
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Connects local IDEs (Antigravity IDE, Cursor, Claude Code) to execute local shell commands & filesystem tools securely without opening inbound ports.
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Connect OpenAI models with streaming tokens and multi-turn conversational recall.
                   </p>
                 </div>
               </div>
               <button
-                onClick={handleTestTunnelExec}
-                disabled={isTunnelExecuting}
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition"
+                onClick={() => handleSetActive('openai')}
+                disabled={activeProvider === 'openai'}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                style={
+                  activeProvider === 'openai'
+                    ? { backgroundColor: 'var(--accent)', color: '#fff' }
+                    : { borderColor: 'var(--line)', borderWidth: 1 }
+                }
               >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>Test Remote Exec</span>
+                {activeProvider === 'openai' ? 'Active' : 'Activate'}
               </button>
             </div>
 
-            <div className="bg-black/50 rounded-lg p-2.5 border border-white/5 text-[11px] font-mono text-slate-300 flex items-center justify-between">
-              <span>CLI Command to launch tunnel on your machine:</span>
-              <code className="text-indigo-400 bg-black/60 px-2 py-0.5 rounded border border-white/5">
-                npm --workspace=apps/tunnel-cli run start
-              </code>
-            </div>
-
-            {tunnelTestOutput && (
-              <div className="p-2.5 rounded-lg bg-black/60 border border-white/10 text-xs font-mono text-slate-300 whitespace-pre-wrap">
-                {tunnelTestOutput}
+            <div className="mt-3 pt-3 border-t space-y-2.5" style={{ borderColor: 'var(--line)' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="sm:col-span-2">
+                  <input
+                    type="password"
+                    placeholder="Enter OpenAI API Key (sk-...)"
+                    value={openAIKey}
+                    onChange={(e) => setOpenAIKey(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none font-mono"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--line)',
+                      color: 'var(--ink)'
+                    }}
+                  />
+                </div>
+                <div>
+                  <select
+                    value={openAIModel}
+                    onChange={(e) => setOpenAIModel(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border text-xs outline-none"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--line)',
+                      color: 'var(--ink)'
+                    }}
+                  >
+                    <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</option>
+                    <option value="gpt-4o">GPT-4o (Flagship)</option>
+                  </select>
+                </div>
               </div>
-            )}
+
+              <div className="flex items-center justify-between">
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] inline-flex items-center space-x-1 hover:underline"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  <span>Get OpenAI API key</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+
+                <button
+                  onClick={handleSaveOpenAI}
+                  disabled={testingId === 'openai' || !openAIKey.trim()}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'var(--accent)',
+                    color: '#fff'
+                  }}
+                >
+                  <RefreshCw className={`w-3 h-3 ${testingId === 'openai' ? 'animate-spin' : ''}`} />
+                  <span>Save & Connect</span>
+                </button>
+              </div>
+
+              {testResult.openai && (
+                <div
+                  className={`text-xs flex items-center space-x-1.5 pt-1 ${
+                    testResult.openai.ok ? 'text-emerald-500' : 'text-amber-500'
+                  }`}
+                >
+                  {testResult.openai.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                  <span>{testResult.openai.message}</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* 4. Local Ollama */}
+          <div
+            className="p-4 rounded-xl border transition"
+            style={{
+              borderColor: activeProvider === 'ollama' ? 'var(--accent)' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'ollama'
+                  ? 'color-mix(in srgb, var(--accent-soft) 40%, var(--surface))'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 shrink-0 mt-0.5">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-semibold">Local Ollama Neural Server</h3>
+                    <span className="text-[10px] font-mono opacity-60">localhost:11434</span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Run open-weight models (Llama 3, DeepSeek, Mistral) on your machine.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleSetActive('ollama')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                style={
+                  activeProvider === 'ollama'
+                    ? { backgroundColor: 'var(--accent)', color: '#fff' }
+                    : { borderColor: 'var(--line)', borderWidth: 1 }
+                }
+              >
+                {activeProvider === 'ollama' ? 'Active' : 'Activate'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="px-6 py-3 border-t flex items-center justify-between text-xs"
+          style={{ borderColor: 'var(--line)', backgroundColor: 'var(--surface)' }}
+        >
+          <span style={{ color: 'var(--muted)' }}>
+            Keys are encrypted & stored in your browser session only.
+          </span>
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg text-xs font-semibold border hover:opacity-85 transition cursor-pointer"
+            style={{ borderColor: 'var(--line)', backgroundColor: 'var(--surface)' }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
