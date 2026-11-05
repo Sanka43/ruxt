@@ -1,19 +1,20 @@
 import React from 'react';
-import { Agent } from '../../types';
-import { Sparkles, Store, PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Activity, Zap } from 'lucide-react';
+import { Agent, User } from '../../types';
+import { Sparkles, Store, PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Activity, Zap, Users } from 'lucide-react';
 
 interface SidebarProps {
   agents: Agent[];
   activeAgentId: string;
   onSelectAgent: (id: string) => void;
-  currentView: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace';
-  onSelectView: (view: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace') => void;
+  currentView: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace' | 'users';
+  onSelectView: (view: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace' | 'users') => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onOpenSettings?: () => void;
   messageCount?: number;
   threadCount?: number;
   userName?: string;
+  currentUser?: User | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -27,11 +28,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   messageCount = 0,
   threadCount = 0,
-  userName = 'User'
+  userName = 'User',
+  currentUser
 }) => {
   const installedAgents = agents.filter((a) => a.isInstalled);
 
-  const handleNavView = (view: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace') => {
+  const handleNavView = (view: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace' | 'users') => {
     onSelectView(view);
     if (window.innerWidth < 768 && onToggleCollapse && !isCollapsed) {
       onToggleCollapse();
@@ -360,6 +362,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Store className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               {!isCollapsed && <span>Marketplace</span>}
             </button>
+
+            {/* Admin User Management */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => handleNavView('users')}
+                title="User Management (Admin)"
+                className={`w-full flex items-center ${
+                  isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-1.5'
+                } rounded-lg text-xs font-semibold transition ${
+                  currentView === 'users'
+                    ? 'text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+                style={
+                  currentView === 'users'
+                    ? { backgroundColor: 'var(--sidebar-active)', color: '#fff' }
+                    : {}
+                }
+              >
+                <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                {!isCollapsed && (
+                  <div className="flex-1 flex items-center justify-between min-w-0">
+                    <span className="truncate">Users & Access</span>
+                    <span className="text-[9px] uppercase font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0">
+                      Admin
+                    </span>
+                  </div>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

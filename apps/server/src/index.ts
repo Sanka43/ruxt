@@ -165,6 +165,78 @@ fastify.put('/api/auth/profile', async (request, reply) => {
   }
 });
 
+// Admin Authentication Guard Helper
+async function requireAdmin(request: any, reply: any): Promise<any> {
+  const token = getBearerToken(request);
+  if (!token) {
+    reply.status(401).send({ ok: false, error: 'Unauthorized: Authentication required.' });
+    return null;
+  }
+  const user = await authService.getUserByToken(token);
+  if (!user || user.role !== 'admin') {
+    reply.status(403).send({ ok: false, error: 'Forbidden: Administrator privileges required.' });
+    return null;
+  }
+  return user;
+}
+
+// --- Admin User Management Endpoints ---
+
+fastify.get('/api/admin/users', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+  const users = await authService.getAllUsers();
+  return { ok: true, users };
+});
+
+fastify.post('/api/admin/users', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+  try {
+    const user = await authService.createUserByAdmin(request.body as any);
+    return { ok: true, user };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message });
+  }
+});
+
+fastify.put('/api/admin/users/:id', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+  try {
+    const { id } = request.params as { id: string };
+    const user = await authService.updateUserByAdmin(id, request.body as any);
+    return { ok: true, user };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message });
+  }
+});
+
+fastify.put('/api/admin/users/:id/password', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+  try {
+    const { id } = request.params as { id: string };
+    const { password } = request.body as any;
+    await authService.resetUserPasswordByAdmin(id, password);
+    return { ok: true, message: 'Password reset successfully.' };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message });
+  }
+});
+
+fastify.delete('/api/admin/users/:id', async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+  try {
+    const { id } = request.params as { id: string };
+    await authService.deleteUserByAdmin(id);
+    return { ok: true, message: 'User deleted successfully.' };
+  } catch (err: any) {
+    return reply.status(400).send({ ok: false, error: err.message });
+  }
+});
+
 // REST API Endpoints
 fastify.get('/api/health', async () => {
   return {

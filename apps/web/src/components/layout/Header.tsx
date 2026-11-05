@@ -4,7 +4,7 @@ import { Columns, Terminal, Zap, Maximize2, Minimize2, PanelLeftOpen, PanelLeftC
 
 interface HeaderProps {
   agent: Agent | null;
-  currentView: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace';
+  currentView: 'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace' | 'users';
   isCanvasOpen: boolean;
   onToggleCanvas: () => void;
   onOpenCommand: () => void;
@@ -51,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Agent Studio';
       case 'marketplace':
         return 'Marketplace';
+      case 'users':
+        return 'User Management & Access';
       case 'workspace':
         return agent ? agent.name : 'Workspace';
       default:

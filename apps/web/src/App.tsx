@@ -16,6 +16,7 @@ import { AgentsView } from './components/views/AgentsView';
 import { MessagesView } from './components/views/MessagesView';
 import { ThreadsView } from './components/views/ThreadsView';
 import { SettingsView } from './components/views/SettingsView';
+import { UserManagementView } from './components/views/UserManagementView';
 import { ThemeDecor } from './components/common/ThemeDecor';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { initTheme } from './utils/theme';
@@ -33,7 +34,7 @@ export function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activeAgentId, setActiveAgentId] = useState<string>('');
   const [currentView, setCurrentView] = useState<
-    'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace'
+    'home' | 'agents' | 'messages' | 'forum' | 'settings' | 'workspace' | 'studio' | 'marketplace' | 'users'
   >('home');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isCanvasOpen, setIsCanvasOpen] = useState<boolean>(true);
@@ -510,6 +511,7 @@ export function App() {
         messageCount={messages.length}
         threadCount={threads.length}
         userName={userName}
+        currentUser={currentUser}
       />
 
       {/* Main Content Area */}
@@ -611,6 +613,8 @@ export function App() {
             onToggleInstall={handleToggleInstall}
             onOpenStudio={() => setCurrentView('studio')}
           />
+        ) : currentView === 'users' ? (
+          <UserManagementView currentUser={currentUser} />
         ) : (
           /* Workspace View: Dual-Split Layout (Interactive Canvas + Chat) */
           <div className="flex-1 flex flex-col h-full overflow-hidden">
