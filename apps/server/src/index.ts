@@ -303,17 +303,29 @@ if (fs.existsSync(webDistDir)) {
 }
 
 // Start server
-const PORT = Number(process.env.PORT) || 1234;
+const rawPort = process.env.PORT;
+const isSocket = rawPort && isNaN(Number(rawPort));
 
 async function bootstrap() {
   try {
     await agentService.ensureSeedAgents();
-    await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`\n======================================================`);
-    console.log(`🚀 RuXt Next-Gen Server Running on http://localhost:${PORT}`);
-    console.log(`✨ Single-Port Unified Architecture (API + WebSockets + UI)`);
-    console.log(`🎯 Active Provider: ${providerHub.getActiveProvider().toUpperCase()}`);
-    console.log(`======================================================\n`);
+    
+    if (isSocket && rawPort) {
+      await fastify.listen({ path: rawPort });
+      console.log(`\n======================================================`);
+      console.log(`🚀 RuXt Next-Gen Server Running on socket: ${rawPort}`);
+      console.log(`✨ Single-Port Unified Architecture (cPanel / Passenger Mode)`);
+      console.log(`🎯 Active Provider: ${providerHub.getActiveProvider().toUpperCase()}`);
+      console.log(`======================================================\n`);
+    } else {
+      const port = Number(rawPort) || 1234;
+      await fastify.listen({ port, host: '0.0.0.0' });
+      console.log(`\n======================================================`);
+      console.log(`🚀 RuXt Next-Gen Server Running on http://localhost:${port}`);
+      console.log(`✨ Single-Port Unified Architecture (API + WebSockets + UI)`);
+      console.log(`🎯 Active Provider: ${providerHub.getActiveProvider().toUpperCase()}`);
+      console.log(`======================================================\n`);
+    }
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

@@ -296,11 +296,25 @@ export function App() {
     setStreamingToken('');
 
     try {
-      await fetch('/api/tasks', {
+      const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId: activeAgentId, prompt })
       });
+      const data = await res.json();
+      if (data?.ok) {
+        // Fallback sync for environments where WebSockets are restricted (e.g. Shared cPanel)
+        fetch(`/api/chat/${activeAgentId}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d?.messages) {
+              setMessages(d.messages);
+            }
+            setIsLoading(false);
+            setStreamingToken(null);
+          })
+          .catch(() => setIsLoading(false));
+      }
     } catch (err) {
       console.error('Failed to dispatch task:', err);
       setIsLoading(false);

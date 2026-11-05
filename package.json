@@ -2,6 +2,7 @@
   "name": "ruxt-next",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Next-generation local-first & cloud-ready AI Agent Operating Workspace",
   "workspaces": [
     "apps/*"
