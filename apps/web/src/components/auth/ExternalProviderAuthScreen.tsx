@@ -25,24 +25,75 @@ export const ExternalProviderAuthScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const [authorizedAccount, setAuthorizedAccount] = useState<string>('');
   const [countdown, setCountdown] = useState(5);
 
+  const isAlreadyConnected = Boolean(
+    localStorage.getItem(`ruxt_${provider}_email`) ||
+    localStorage.getItem('ruxt_antigravity_email')
+  );
+
   useEffect(() => {
     // Pre-populate with existing email if available in local storage or session
-    const savedEmail = localStorage.getItem(`ruxt_${provider}_email`) || localStorage.getItem('ruxt_user_email') || '';
+    const savedEmail =
+      localStorage.getItem(`ruxt_${provider}_email`) ||
+      localStorage.getItem('ruxt_antigravity_email') ||
+      localStorage.getItem('ruxt_user_email') ||
+      '';
     if (savedEmail) setEmail(savedEmail);
   }, [provider]);
 
   useEffect(() => {
     let timer: any;
-    if (isSuccess && countdown > 0) {
+    if ((isSuccess || isDisconnected) && countdown > 0) {
       timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    } else if (isSuccess && countdown === 0) {
+    } else if ((isSuccess || isDisconnected) && countdown === 0) {
       window.close();
     }
     return () => clearTimeout(timer);
-  }, [isSuccess, countdown]);
+  }, [isSuccess, isDisconnected, countdown]);
+
+  const handleDisconnect = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      let endpointUrl = '/api/antigravity/disconnect';
+      if (provider === 'cursor') endpointUrl = '/api/cursor/disconnect';
+      if (provider === 'claude') endpointUrl = '/api/claude/disconnect';
+      if (provider === 'codex') endpointUrl = '/api/codex/disconnect';
+
+      await fetch(endpointUrl, { method: 'POST' }).catch(() => {});
+    } catch (_) {}
+
+    // Clean up local storage
+    localStorage.removeItem(`ruxt_${provider}_connected`);
+    localStorage.removeItem(`ruxt_${provider}_email`);
+    localStorage.removeItem(`ruxt_${provider}_model`);
+    localStorage.removeItem('ruxt_antigravity_email');
+    localStorage.removeItem('ruxt_antigravity_pro_email');
+    localStorage.removeItem('ruxt_antigravity_pro_connected');
+    localStorage.removeItem('ruxt_antigravity_connected');
+    localStorage.setItem('ruxt_active_provider', 'simulator');
+    localStorage.setItem('ruxt_auth_sync_timestamp', String(Date.now()));
+
+    // Broadcast disconnect
+    try {
+      const channel = new BroadcastChannel('ruxt_auth_channel');
+      channel.postMessage({ type: 'AUTH_DISCONNECT', provider });
+      channel.close();
+    } catch (_) {}
+
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'AUTH_DISCONNECT', provider }, '*');
+      }
+    } catch (_) {}
+
+    setIsDisconnected(true);
+    setLoading(false);
+  };
 
   const notifyParentWindow = (accountInfo: any) => {
     // 1. BroadcastChannel (Works across all tabs in same origin)
@@ -183,7 +234,31 @@ export const ExternalProviderAuthScreen: React.FC = () => {
           </div>
 
           <div className="p-6 sm:p-8 space-y-5">
-            {isSuccess ? (
+            {isDisconnected ? (
+              <div className="py-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-xl shadow-amber-500/20">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold text-white">Account Disconnected!</h2>
+                  <p className="text-xs text-slate-300">
+                    Unlinked <span className="text-purple-300 font-semibold">{email || 'Account'}</span> from {meta.title}.
+                  </p>
+                  <p className="text-xs text-amber-400 pt-1 font-mono">
+                    RuXt workspace reset to Simulation Engine.
+                  </p>
+                </div>
+
+                <div className="pt-4 flex flex-col space-y-2">
+                  <button
+                    onClick={() => window.close()}
+                    className="w-full py-2.5 px-4 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-semibold transition"
+                  >
+                    Close This Tab (Auto-closing in {countdown}s)
+                  </button>
+                </div>
+              </div>
+            ) : isSuccess ? (
               <div className="py-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
                 <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
                   <CheckCircle2 className="w-10 h-10" />
@@ -209,6 +284,23 @@ export const ExternalProviderAuthScreen: React.FC = () => {
               </div>
             ) : (
               <>
+                {isAlreadyConnected && (
+                  <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <div className="text-[10px] text-purple-300 font-semibold uppercase font-mono">Currently Linked</div>
+                      <div className="text-white font-mono text-[11px] truncate max-w-[200px]">{email}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      disabled={loading}
+                      className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
+
                 {/* 1-Click Quick Google / Account Sign-In Button */}
                 <button
                   type="button"
@@ -287,15 +379,29 @@ export const ExternalProviderAuthScreen: React.FC = () => {
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2 disabled:opacity-50"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{loading ? 'Authorizing Subscription...' : 'Authorize & Link Account'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>{loading ? 'Authorizing Subscription...' : 'Authorize & Link Account'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+
+                    {isAlreadyConnected && (
+                      <button
+                        type="button"
+                        onClick={handleDisconnect}
+                        disabled={loading}
+                        className="py-3 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 rounded-xl text-xs font-semibold transition cursor-pointer"
+                        title="Disconnect this account"
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
                 </form>
 
                 {/* Features breakdown */}

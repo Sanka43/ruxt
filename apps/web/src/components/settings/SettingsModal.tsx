@@ -116,6 +116,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         fetchAntigravityStatus();
         onProviderChanged(data.provider);
         showNotice(`${data.provider.toUpperCase()} Linked & Activated via New Tab!`);
+      } else if (data?.type === 'AUTH_DISCONNECT') {
+        setIsAntigravityConnected(false);
+        setAntigravityEmail('');
+        fetchProviders();
+        onProviderChanged('simulator');
+        showNotice('Account Disconnected. Switched to Simulation Engine.');
       }
     };
 
@@ -197,13 +203,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleDisconnectAntigravity = async () => {
     try {
-      await fetch('/api/antigravity/disconnect', { method: 'POST' });
-      setIsAntigravityConnected(false);
-      localStorage.removeItem('ruxt_antigravity_email');
-      fetchProviders();
-      onProviderChanged('simulator');
-      showNotice('Antigravity Pro disconnected. Switched to Simulation Engine.');
+      await fetch('/api/antigravity/disconnect', { method: 'POST' }).catch(() => {});
     } catch (_) {}
+
+    setIsAntigravityConnected(false);
+    setAntigravityEmail('');
+    localStorage.removeItem('ruxt_antigravity_email');
+    localStorage.removeItem('ruxt_antigravity_pro_email');
+    localStorage.removeItem('ruxt_antigravity_pro_connected');
+    localStorage.removeItem('ruxt_antigravity_connected');
+    localStorage.setItem('ruxt_active_provider', 'simulator');
+    localStorage.setItem('ruxt_auth_sync_timestamp', String(Date.now()));
+
+    try {
+      const channel = new BroadcastChannel('ruxt_auth_channel');
+      channel.postMessage({ type: 'AUTH_DISCONNECT', provider: 'antigravity_pro' });
+      channel.close();
+    } catch (_) {}
+
+    fetchProviders();
+    onProviderChanged('simulator');
+    showNotice('Antigravity Pro disconnected. Switched to Simulation Engine.');
   };
 
   const handleSaveGeneral = () => {

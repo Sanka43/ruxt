@@ -167,6 +167,8 @@ export function App() {
       const data = e?.data;
       if (data?.type === 'AUTH_SUCCESS' && data?.provider) {
         setActiveProvider(data.provider);
+      } else if (data?.type === 'AUTH_DISCONNECT') {
+        setActiveProvider('simulator');
       }
     };
 
