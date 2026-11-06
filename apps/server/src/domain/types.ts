@@ -84,7 +84,7 @@ export interface AuthResponse {
 export interface ProviderStatus {
   id: string;
   name: string;
-  type: 'simulator' | 'ollama' | 'gemini' | 'claude' | 'openai' | 'local_ide';
+  type: 'simulator' | 'ollama' | 'gemini' | 'claude' | 'openai' | 'local_ide' | 'antigravity_pro' | 'antigravity' | 'cursor' | 'codex';
   connected: boolean;
   label: string;
   detail: string;

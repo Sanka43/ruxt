@@ -15,6 +15,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { ProviderStatus } from '../../types';
+import { AntigravityConnectModal } from './AntigravityConnectModal';
+import { MultiProviderConnectModal, ProviderType } from './MultiProviderConnectModal';
 
 interface ProviderModalProps {
   isOpen: boolean;
@@ -51,6 +53,15 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
   const [tunnelTestOutput, setTunnelTestOutput] = useState<string | null>(null);
   const [isTunnelExecuting, setIsTunnelExecuting] = useState(false);
 
+  // Antigravity Pro state
+  const [isAntigravityModalOpen, setIsAntigravityModalOpen] = useState(false);
+  const [antigravityEmail, setAntigravityEmail] = useState(() => localStorage.getItem('ruxt_antigravity_email') || '');
+  const [isAntigravityConnected, setIsAntigravityConnected] = useState(false);
+
+  // Multi-Provider state
+  const [isMultiModalOpen, setIsMultiModalOpen] = useState(false);
+  const [selectedConnectProvider, setSelectedConnectProvider] = useState<ProviderType>('cursor');
+
   // Auto-restore saved keys on mount
   useEffect(() => {
     const savedGemini = localStorage.getItem('ruxt_gemini_key');
@@ -77,8 +88,20 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchProviders();
+      fetchAntigravityStatus();
     }
   }, [isOpen]);
+
+  const fetchAntigravityStatus = async () => {
+    try {
+      const res = await fetch('/api/antigravity/status');
+      const data = await res.json();
+      if (data.ok) {
+        setIsAntigravityConnected(data.connected);
+        if (data.email) setAntigravityEmail(data.email);
+      }
+    } catch (_) {}
+  };
 
   const fetchProviders = async () => {
     setLoading(true);
@@ -294,7 +317,9 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
               <span className="font-semibold">
                 Current Active Engine:{' '}
                 <span className="uppercase tracking-wider font-mono">
-                  {activeProvider === 'simulator'
+                  {activeProvider === 'antigravity_pro'
+                    ? 'Antigravity Pro Neural Brain'
+                    : activeProvider === 'simulator'
                     ? 'Built-in Simulation Engine'
                     : activeProvider === 'gemini'
                     ? 'Google Gemini Cloud'
@@ -307,6 +332,189 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
               </span>
             </div>
             <span className="text-[11px] opacity-80">BYOK Protected</span>
+          </div>
+
+          {/* 0. Antigravity Pro Card */}
+          <div
+            className="p-4 rounded-xl border transition relative overflow-hidden"
+            style={{
+              borderColor: activeProvider === 'antigravity_pro' ? '#a855f7' : 'color-mix(in srgb, #a855f7 30%, var(--line))',
+              backgroundColor:
+                activeProvider === 'antigravity_pro'
+                  ? 'rgba(168, 85, 247, 0.12)'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shrink-0 mt-0.5 shadow-md shadow-purple-500/20">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-semibold">Antigravity Pro Neural Brain</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                      PRO SUITE
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    {isAntigravityConnected
+                      ? `Linked to Pro account (${antigravityEmail}). DeepMind multi-step reasoning, swarm agents, and sub-second code generation active.`
+                      : 'Connect your registered Antigravity Pro email to unlock high-intelligence cognitive tokens and autonomous multi-agent swarms.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                {isAntigravityConnected ? (
+                  <button
+                    onClick={() => handleSetActive('antigravity_pro')}
+                    disabled={activeProvider === 'antigravity_pro'}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
+                    style={
+                      activeProvider === 'antigravity_pro'
+                        ? { backgroundColor: '#a855f7', color: '#fff' }
+                        : { borderColor: '#a855f7', borderWidth: 1, color: '#a855f7' }
+                    }
+                  >
+                    {activeProvider === 'antigravity_pro' ? 'Active' : 'Activate'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAntigravityModalOpen(true)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-600/30 flex items-center space-x-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Connect</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 0.1 Cursor AI & Composer Card */}
+          <div
+            className="p-4 rounded-xl border transition relative overflow-hidden"
+            style={{
+              borderColor: activeProvider === 'cursor' ? '#06b6d4' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'cursor'
+                  ? 'rgba(6, 182, 212, 0.1)'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white shrink-0 mt-0.5">
+                  <Terminal className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-semibold">Cursor AI & Composer</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                      COMPOSER
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Multi-file speculative diffs, symbol indexing, and local Cursor IDE bridge.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedConnectProvider('cursor');
+                    setIsMultiModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs"
+                >
+                  {activeProvider === 'cursor' ? 'Active' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 0.2 Anthropic Claude Card */}
+          <div
+            className="p-4 rounded-xl border transition relative overflow-hidden"
+            style={{
+              borderColor: activeProvider === 'claude' ? '#f59e0b' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'claude'
+                  ? 'rgba(245, 158, 11, 0.1)'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 mt-0.5">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-semibold">Anthropic Claude 3.7 / 3.5</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      SONNET
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Constitutional AI, high-precision software architecture, and 200k context ingestion.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedConnectProvider('claude');
+                    setIsMultiModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                >
+                  {activeProvider === 'claude' ? 'Active' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 0.3 OpenAI Codex Card */}
+          <div
+            className="p-4 rounded-xl border transition relative overflow-hidden"
+            style={{
+              borderColor: activeProvider === 'codex' ? '#10b981' : 'var(--line)',
+              backgroundColor:
+                activeProvider === 'codex'
+                  ? 'rgba(16, 185, 129, 0.1)'
+                  : 'color-mix(in srgb, var(--surface) 95%, var(--bg))'
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0 mt-0.5">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-semibold">OpenAI Codex & o3-mini</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      AUTONOMOUS SWE
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                    Test-driven autonomous code generation, algorithmic complexity bounds, and self-healing fixes.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedConnectProvider('codex');
+                    setIsMultiModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                >
+                  {activeProvider === 'codex' ? 'Active' : 'Connect'}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* 1. Built-in Simulation Engine */}
@@ -645,6 +853,37 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
           </button>
         </div>
       </div>
+
+      <AntigravityConnectModal
+        isOpen={isAntigravityModalOpen}
+        onClose={() => setIsAntigravityModalOpen(false)}
+        currentEmail={antigravityEmail}
+        isAlreadyConnected={isAntigravityConnected}
+        onConnected={(acc) => {
+          if (acc?.connected !== false) {
+            setIsAntigravityConnected(true);
+            if (acc.email) setAntigravityEmail(acc.email);
+            onProviderChanged('antigravity_pro');
+            fetchProviders();
+          } else {
+            setIsAntigravityConnected(false);
+            fetchProviders();
+            onProviderChanged('simulator');
+          }
+        }}
+      />
+
+      {/* Multi-Ecosystem Provider Connect Dialog */}
+      <MultiProviderConnectModal
+        isOpen={isMultiModalOpen}
+        onClose={() => setIsMultiModalOpen(false)}
+        initialProvider={selectedConnectProvider}
+        onProviderConnected={(provId) => {
+          onProviderChanged(provId);
+          fetchProviders();
+          fetchAntigravityStatus();
+        }}
+      />
     </div>
   );
 };

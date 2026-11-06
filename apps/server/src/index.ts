@@ -12,6 +12,10 @@ import { providerHub, ProviderId } from './providers/provider.hub.js';
 import { geminiProvider } from './providers/gemini.provider.js';
 import { ollamaProvider } from './providers/ollama.provider.js';
 import { openAIProvider } from './providers/openai.provider.js';
+import { antigravityProvider } from './providers/antigravity.provider.js';
+import { claudeProvider } from './providers/claude.provider.js';
+import { cursorProvider } from './providers/cursor.provider.js';
+import { codexProvider } from './providers/codex.provider.js';
 import type { WebSocket } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -363,6 +367,34 @@ fastify.post('/api/providers/active', async (request, reply) => {
 
 fastify.post('/api/providers/configure', async (request, reply) => {
   const body = request.body as any;
+  if (body?.provider === 'antigravity_pro' || body?.provider === 'antigravity') {
+    if (body.email) {
+      antigravityProvider.bindAccount(body.email, body.model, body.licenseKey);
+      providerHub.setActiveProvider('antigravity_pro');
+      broadcast('provider:active', { activeProvider: 'antigravity_pro' });
+    }
+    return { ok: true, provider: 'antigravity_pro', info: antigravityProvider.getAccountInfo() };
+  }
+  if (body?.provider === 'cursor') {
+    if (body.email) cursorProvider.bindAccount(body.email, body.model);
+    providerHub.setActiveProvider('cursor');
+    broadcast('provider:active', { activeProvider: 'cursor' });
+    return { ok: true, provider: 'cursor', info: cursorProvider.getAccountInfo() };
+  }
+  if (body?.provider === 'claude') {
+    if (body.apiKey) claudeProvider.setApiKey(body.apiKey, body.model);
+    if (body.email) claudeProvider.bindAccount(body.email, body.model, body.apiKey);
+    providerHub.setActiveProvider('claude');
+    broadcast('provider:active', { activeProvider: 'claude' });
+    return { ok: true, provider: 'claude', info: claudeProvider.getAccountInfo() };
+  }
+  if (body?.provider === 'codex') {
+    if (body.email) codexProvider.bindAccount(body.email, body.model, body.apiKey);
+    if (body.apiKey) codexProvider.setApiKey(body.apiKey, body.model);
+    providerHub.setActiveProvider('codex');
+    broadcast('provider:active', { activeProvider: 'codex' });
+    return { ok: true, provider: 'codex', info: codexProvider.getAccountInfo() };
+  }
   if (body?.provider === 'gemini') {
     geminiProvider.setApiKey(body.apiKey, body.model);
     return { ok: true, provider: 'gemini', configured: geminiProvider.isConfigured() };
@@ -380,6 +412,18 @@ fastify.post('/api/providers/configure', async (request, reply) => {
 
 fastify.post('/api/providers/test', async (request) => {
   const body = request.body as { provider: string };
+  if (body?.provider === 'antigravity_pro' || body?.provider === 'antigravity') {
+    return await antigravityProvider.testConnection();
+  }
+  if (body?.provider === 'cursor') {
+    return await cursorProvider.testConnection();
+  }
+  if (body?.provider === 'claude') {
+    return await claudeProvider.testConnection();
+  }
+  if (body?.provider === 'codex') {
+    return await codexProvider.testConnection();
+  }
   if (body?.provider === 'gemini') {
     const test = await geminiProvider.testConnection();
     return test;
@@ -393,6 +437,105 @@ fastify.post('/api/providers/test', async (request) => {
     return { ok: test.available, message: test.available ? `Connected (${test.models.length} models)` : 'Ollama offline' };
   }
   return { ok: true, message: 'Simulator engine is always online' };
+});
+
+// Antigravity Pro Direct Connection Endpoints
+fastify.get('/api/antigravity/status', async () => {
+  return {
+    ok: true,
+    ...antigravityProvider.getAccountInfo()
+  };
+});
+
+fastify.post('/api/antigravity/connect', async (request, reply) => {
+  const body = request.body as { email: string; model?: string; licenseKey?: string };
+  if (!body?.email || !body.email.includes('@')) {
+    return reply.status(400).send({ ok: false, error: 'Valid Antigravity Pro account email is required' });
+  }
+
+  antigravityProvider.bindAccount(body.email, body.model, body.licenseKey);
+  providerHub.setActiveProvider('antigravity_pro');
+  broadcast('provider:active', { activeProvider: 'antigravity_pro' });
+  broadcast('antigravity:status', antigravityProvider.getAccountInfo());
+
+  return {
+    ok: true,
+    message: `Successfully linked Antigravity Pro account for ${body.email}`,
+    account: antigravityProvider.getAccountInfo()
+  };
+});
+
+fastify.post('/api/antigravity/disconnect', async () => {
+  antigravityProvider.disconnect();
+  providerHub.setActiveProvider('simulator');
+  broadcast('provider:active', { activeProvider: 'simulator' });
+  broadcast('antigravity:status', antigravityProvider.getAccountInfo());
+  return {
+    ok: true,
+    message: 'Antigravity Pro unlinked. Switched to Simulation Engine.'
+  };
+});
+
+// Cursor Connection Endpoints
+fastify.get('/api/cursor/status', async () => {
+  return { ok: true, ...cursorProvider.getAccountInfo() };
+});
+fastify.post('/api/cursor/connect', async (request, reply) => {
+  const body = request.body as { email: string; model?: string };
+  cursorProvider.bindAccount(body?.email || 'cursor.user@local', body?.model);
+  providerHub.setActiveProvider('cursor');
+  broadcast('provider:active', { activeProvider: 'cursor' });
+  return { ok: true, message: 'Cursor AI connected', account: cursorProvider.getAccountInfo() };
+});
+fastify.post('/api/cursor/disconnect', async () => {
+  cursorProvider.disconnect();
+  providerHub.setActiveProvider('simulator');
+  broadcast('provider:active', { activeProvider: 'simulator' });
+  return { ok: true, message: 'Cursor unlinked' };
+});
+
+// Claude Connection Endpoints
+fastify.get('/api/claude/status', async () => {
+  return { ok: true, ...claudeProvider.getAccountInfo() };
+});
+fastify.post('/api/claude/connect', async (request, reply) => {
+  const body = request.body as { email?: string; apiKey?: string; model?: string };
+  if (!body?.email && !body?.apiKey) {
+    return reply.status(400).send({ ok: false, error: 'Email or Anthropic API Key is required' });
+  }
+  if (body.email) claudeProvider.bindAccount(body.email, body.model, body.apiKey);
+  if (body.apiKey) claudeProvider.setApiKey(body.apiKey, body.model);
+  providerHub.setActiveProvider('claude');
+  broadcast('provider:active', { activeProvider: 'claude' });
+  return { ok: true, message: 'Anthropic Claude connected', account: claudeProvider.getAccountInfo() };
+});
+fastify.post('/api/claude/disconnect', async () => {
+  claudeProvider.disconnect();
+  providerHub.setActiveProvider('simulator');
+  broadcast('provider:active', { activeProvider: 'simulator' });
+  return { ok: true, message: 'Claude unlinked' };
+});
+
+// Codex Connection Endpoints
+fastify.get('/api/codex/status', async () => {
+  return { ok: true, ...codexProvider.getAccountInfo() };
+});
+fastify.post('/api/codex/connect', async (request, reply) => {
+  const body = request.body as { email?: string; apiKey?: string; model?: string };
+  if (!body?.email && !body?.apiKey) {
+    return reply.status(400).send({ ok: false, error: 'Email or OpenAI Key is required' });
+  }
+  if (body.email) codexProvider.bindAccount(body.email, body.model, body.apiKey);
+  if (body.apiKey) codexProvider.setApiKey(body.apiKey, body.model);
+  providerHub.setActiveProvider('codex');
+  broadcast('provider:active', { activeProvider: 'codex' });
+  return { ok: true, message: 'OpenAI Codex connected', account: codexProvider.getAccountInfo() };
+});
+fastify.post('/api/codex/disconnect', async () => {
+  codexProvider.disconnect();
+  providerHub.setActiveProvider('simulator');
+  broadcast('provider:active', { activeProvider: 'simulator' });
+  return { ok: true, message: 'Codex unlinked' };
 });
 
 // Outbound Tunnel Command Execution via Local IDE Bridge

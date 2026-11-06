@@ -25,6 +25,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Agent, ProviderStatus } from '../../types';
+import { AntigravityConnectModal } from '../providers/AntigravityConnectModal';
+import { MultiProviderConnectModal, ProviderType } from '../providers/MultiProviderConnectModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -76,6 +78,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [providerTestMsg, setProviderTestMsg] = useState<{ [k: string]: { ok: boolean; message: string } }>({});
 
+  // Antigravity Pro State
+  const [isAntigravityModalOpen, setIsAntigravityModalOpen] = useState(false);
+  const [antigravityEmail, setAntigravityEmail] = useState(() => localStorage.getItem('ruxt_antigravity_email') || '');
+  const [antigravityModel, setAntigravityModel] = useState(() => localStorage.getItem('ruxt_antigravity_model') || 'antigravity-pro-3.8-flash');
+  const [isAntigravityConnected, setIsAntigravityConnected] = useState(false);
+  const [antigravityTier, setAntigravityTier] = useState('Pro (Active)');
+
+  // Multi-Provider Connect State
+  const [isMultiConnectModalOpen, setIsMultiConnectModalOpen] = useState(false);
+  const [multiConnectProvider, setMultiConnectProvider] = useState<ProviderType>('antigravity_pro');
+
   // Tunnel State
   const [allowRemoteExec, setAllowRemoteExec] = useState(() => localStorage.getItem('ruxt_remote_exec') !== 'false');
   const [tunnelTestOutput, setTunnelTestOutput] = useState<string | null>(null);
@@ -92,6 +105,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (isOpen) {
       fetchProviders();
       fetchSystemStats();
+      fetchAntigravityStatus();
     }
   }, [isOpen]);
 
@@ -130,6 +144,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const res = await fetch('/api/system/stats');
       const data = await res.json();
       if (data.ok) setSystemStats(data);
+    } catch (_) {}
+  };
+
+  const fetchAntigravityStatus = async () => {
+    try {
+      const res = await fetch('/api/antigravity/status');
+      const data = await res.json();
+      if (data.ok) {
+        setIsAntigravityConnected(data.connected);
+        if (data.email) setAntigravityEmail(data.email);
+        if (data.tier) setAntigravityTier(data.tier);
+        if (data.model) setAntigravityModel(data.model);
+      }
+    } catch (_) {}
+  };
+
+  const handleDisconnectAntigravity = async () => {
+    try {
+      await fetch('/api/antigravity/disconnect', { method: 'POST' });
+      setIsAntigravityConnected(false);
+      localStorage.removeItem('ruxt_antigravity_email');
+      fetchProviders();
+      onProviderChanged('simulator');
+      showNotice('Antigravity Pro disconnected. Switched to Simulation Engine.');
     } catch (_) {}
   };
 
@@ -512,60 +550,223 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Active Provider Selector Grid */}
                 <div className="space-y-3">
-                  <label className="text-xs font-semibold text-slate-300 block">Active Engine Selection</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300 block">Active Engine Selection</label>
+                    <span className="text-[10px] text-slate-400">Click any engine to activate or configure</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                     {[
                       {
-                        id: 'simulator',
-                        title: 'Simulator Engine',
-                        desc: 'Instant offline simulation with dynamic persona tokens',
-                        badge: 'Zero Setup'
+                        id: 'antigravity_pro',
+                        title: 'Antigravity Pro',
+                        desc: isAntigravityConnected ? `Linked: ${antigravityEmail}` : 'DeepMind Reasoning',
+                        badge: 'PRO NEURAL',
+                        connectType: 'antigravity_pro' as ProviderType,
+                        border: 'border-purple-500/40',
+                        activeBg: 'bg-purple-900/30 border-purple-500 shadow-purple-600/20'
+                      },
+                      {
+                        id: 'cursor',
+                        title: 'Cursor AI',
+                        desc: 'Composer & Multi-Diff',
+                        badge: 'COMPOSER',
+                        connectType: 'cursor' as ProviderType,
+                        border: 'border-cyan-500/40',
+                        activeBg: 'bg-cyan-950/40 border-cyan-500 shadow-cyan-600/20'
+                      },
+                      {
+                        id: 'claude',
+                        title: 'Claude 3.7 / 3.5',
+                        desc: 'Constitutional Sonnet',
+                        badge: 'PRECISION',
+                        connectType: 'claude' as ProviderType,
+                        border: 'border-amber-500/40',
+                        activeBg: 'bg-amber-950/40 border-amber-500 shadow-amber-600/20'
                       },
                       {
                         id: 'gemini',
                         title: 'Google Gemini',
-                        desc: 'Gemini 1.5 Pro / Flash with high-intelligence reasoning',
-                        badge: 'Cloud Neural'
+                        desc: 'Gemini 1.5/2.0 Pro',
+                        badge: 'CLOUD NEURAL',
+                        connectType: 'gemini' as ProviderType,
+                        border: 'border-blue-500/40',
+                        activeBg: 'bg-blue-950/40 border-blue-500 shadow-blue-600/20'
+                      },
+                      {
+                        id: 'codex',
+                        title: 'OpenAI Codex',
+                        desc: 'Autonomous SWE / o3',
+                        badge: 'AUTONOMOUS',
+                        connectType: 'codex' as ProviderType,
+                        border: 'border-emerald-500/40',
+                        activeBg: 'bg-emerald-950/40 border-emerald-500 shadow-emerald-600/20'
                       },
                       {
                         id: 'ollama',
                         title: 'Local Ollama',
-                        desc: 'Llama 3, DeepSeek-R1, Mistral running 100% locally',
-                        badge: 'Private Local'
+                        desc: 'Llama 3 & DeepSeek',
+                        badge: 'PRIVATE LOCAL',
+                        connectType: 'ollama' as ProviderType,
+                        border: 'border-zinc-500/40',
+                        activeBg: 'bg-zinc-900/50 border-zinc-500 shadow-zinc-600/20'
+                      },
+                      {
+                        id: 'simulator',
+                        title: 'Simulator Engine',
+                        desc: 'Zero-Setup Offline',
+                        badge: 'ZERO SETUP',
+                        connectType: null,
+                        border: 'border-white/5',
+                        activeBg: 'bg-indigo-600/20 border-indigo-500 shadow-indigo-600/20'
                       }
-                    ].map((p) => {
+                    ].map((p: any) => {
                       const isActive = activeProvider === p.id;
                       return (
                         <button
                           key={p.id}
-                          onClick={() => handleSetActiveProvider(p.id)}
-                          className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between ${
+                          onClick={() => {
+                            if (p.connectType && !isActive) {
+                              setMultiConnectProvider(p.connectType);
+                              setIsMultiConnectModalOpen(true);
+                            } else {
+                              handleSetActiveProvider(p.id);
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                             isActive
-                              ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
-                              : 'bg-surface/60 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                              ? `${p.activeBg} text-white shadow-lg`
+                              : `bg-surface/60 ${p.border} text-slate-400 hover:text-white hover:border-white/20`
                           }`}
                         >
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold text-white">{p.title}</span>
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 font-mono">{p.badge}</span>
+                              <span className="text-xs font-bold text-white flex items-center space-x-1 truncate">
+                                <span>{p.title}</span>
+                              </span>
+                              <span className="text-[8px] px-1 py-0.2 rounded font-mono bg-white/10 shrink-0">
+                                {p.badge}
+                              </span>
                             </div>
-                            <p className="text-[11px] text-slate-400 leading-relaxed">{p.desc}</p>
+                            <p className="text-[10px] text-slate-400 leading-relaxed truncate">{p.desc}</p>
                           </div>
-                          <div className="mt-3 flex items-center space-x-1 text-[11px] font-semibold text-indigo-400">
+                          <div className="mt-2.5 flex items-center space-x-1 text-[10px] font-semibold text-indigo-400">
                             {isActive ? (
                               <span className="flex items-center space-x-1 text-emerald-400">
-                                <Check className="w-3.5 h-3.5" />
+                                <Check className="w-3 h-3" />
                                 <span>Active</span>
                               </span>
                             ) : (
-                              <span>Click to activate</span>
+                              <span className="flex items-center space-x-1 text-slate-400 hover:text-white">
+                                <span>Connect / Use</span>
+                                <ArrowRight className="w-2.5 h-2.5" />
+                              </span>
                             )}
                           </div>
                         </button>
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Ecosystem Connection Hub Showcase Banner */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-blue-950/40 border border-indigo-500/30 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Multi-Ecosystem AI Bridge Portal</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Seamlessly link Antigravity Pro, Cursor, Claude, Gemini, or Codex accounts with instant token streaming.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMultiConnectProvider('antigravity_pro');
+                      setIsMultiConnectModalOpen(true);
+                    }}
+                    className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/30 shrink-0 ml-3"
+                  >
+                    Open Connect Hub
+                  </button>
+                </div>
+
+                {/* Antigravity Pro Card */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-purple-950/40 via-indigo-950/30 to-surface/60 border border-purple-500/30 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl shadow-purple-950/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/30">
+                        <Sparkles className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center space-x-1.5">
+                          <span>Antigravity Pro Neural Engine</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            PRO TIER
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">Google DeepMind Thinking Architecture & Uncapped Tokens</p>
+                      </div>
+                    </div>
+
+                    {isAntigravityConnected ? (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
+                        <Check className="w-3 h-3" />
+                        <span>Connected</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Not Linked
+                      </span>
+                    )}
+                  </div>
+
+                  {isAntigravityConnected ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div>
+                          <div className="text-[10px] text-slate-400">Active Account Email</div>
+                          <div className="text-white font-mono font-semibold">{antigravityEmail}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400">Subscription Status</div>
+                          <div className="text-purple-300 font-semibold">{antigravityTier}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400">Active Model</div>
+                          <div className="text-indigo-300 font-semibold">{antigravityModel}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setIsAntigravityModalOpen(true)}
+                          className="px-3.5 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-medium transition"
+                        >
+                          Switch Account / Change Model
+                        </button>
+                        <button
+                          onClick={handleDisconnectAntigravity}
+                          className="px-3.5 py-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 border border-white/5 rounded-xl text-xs font-medium transition"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pt-1">
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Purchased an Antigravity Pro subscription? Connect your registered email to link your RuXt workspace to Antigravity's high-speed neural models and autonomous thinking pipeline.
+                      </p>
+                      <button
+                        onClick={() => setIsAntigravityModalOpen(true)}
+                        className="py-2 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 flex items-center space-x-2"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Connect Antigravity Account</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Gemini Config */}
@@ -1029,6 +1230,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Dedicated Antigravity Pro Web Connect Dialog */}
+      <AntigravityConnectModal
+        isOpen={isAntigravityModalOpen}
+        onClose={() => setIsAntigravityModalOpen(false)}
+        currentEmail={antigravityEmail}
+        isAlreadyConnected={isAntigravityConnected}
+        onConnected={(acc) => {
+          if (acc?.connected !== false) {
+            setIsAntigravityConnected(true);
+            if (acc.email) setAntigravityEmail(acc.email);
+            if (acc.model) setAntigravityModel(acc.model);
+            if (acc.tier) setAntigravityTier(acc.tier);
+            onProviderChanged('antigravity_pro');
+            fetchProviders();
+            showNotice(`Antigravity Pro activated for ${acc.email}`);
+          } else {
+            setIsAntigravityConnected(false);
+            fetchProviders();
+            onProviderChanged('simulator');
+          }
+        }}
+      />
+      {/* Multi-Ecosystem Provider Connect Dialog */}
+      <MultiProviderConnectModal
+        isOpen={isMultiConnectModalOpen}
+        onClose={() => setIsMultiConnectModalOpen(false)}
+        initialProvider={multiConnectProvider}
+        onProviderConnected={(provId, data) => {
+          onProviderChanged(provId);
+          fetchProviders();
+          fetchAntigravityStatus();
+          showNotice(`${provId.toUpperCase()} Connected & Activated`);
+        }}
+      />
     </div>
   );
 };
