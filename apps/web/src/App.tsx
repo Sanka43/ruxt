@@ -20,6 +20,7 @@ import { SettingsView } from './components/views/SettingsView';
 import { UserManagementView } from './components/views/UserManagementView';
 import { ThemeDecor } from './components/common/ThemeDecor';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { ExternalProviderAuthScreen } from './components/auth/ExternalProviderAuthScreen';
 import { initTheme } from './utils/theme';
 
 export function App() {
@@ -159,6 +160,38 @@ export function App() {
       timestamp: Date.now() - 3600000
     }
   ]);
+
+  // Cross-Tab Multi-Ecosystem Auth Handshake Listener
+  useEffect(() => {
+    const handleAuthMessage = (e: any) => {
+      const data = e?.data;
+      if (data?.type === 'AUTH_SUCCESS' && data?.provider) {
+        setActiveProvider(data.provider);
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('ruxt_auth_channel');
+      channel.onmessage = handleAuthMessage;
+    } catch (_) {}
+
+    window.addEventListener('message', handleAuthMessage);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ruxt_auth_sync_timestamp') {
+        const prov = localStorage.getItem('ruxt_active_provider');
+        if (prov) setActiveProvider(prov);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('message', handleAuthMessage);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   const chatWidthClass =
     chatWidthPreference === 'compact'
@@ -469,6 +502,13 @@ export function App() {
   };
 
   const activeAgent = agents.find((a) => a.id === activeAgentId) || null;
+
+  // Intercept dedicated new tab provider authentication route
+  const searchParams = new URLSearchParams(window.location.search);
+  const isConnectRoute = window.location.pathname.startsWith('/auth/connect') || searchParams.has('connect_provider');
+  if (isConnectRoute) {
+    return <ExternalProviderAuthScreen />;
+  }
 
   if (isAuthChecking) {
     return (

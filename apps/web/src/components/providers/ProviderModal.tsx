@@ -90,6 +90,28 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
       fetchProviders();
       fetchAntigravityStatus();
     }
+
+    const handleCrossTabAuth = (e: any) => {
+      const data = e?.data;
+      if (data?.type === 'AUTH_SUCCESS' && data?.provider) {
+        fetchProviders();
+        fetchAntigravityStatus();
+        onProviderChanged(data.provider);
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('ruxt_auth_channel');
+      channel.onmessage = handleCrossTabAuth;
+    } catch (_) {}
+
+    window.addEventListener('message', handleCrossTabAuth);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('message', handleCrossTabAuth);
+    };
   }, [isOpen]);
 
   const fetchAntigravityStatus = async () => {
@@ -380,11 +402,11 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
                   </button>
                 ) : (
                   <button
-                    onClick={() => setIsAntigravityModalOpen(true)}
+                    onClick={() => window.open('/auth/connect?provider=antigravity_pro', '_blank')}
                     className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-600/30 flex items-center space-x-1"
                   >
                     <Sparkles className="w-3 h-3" />
-                    <span>Connect</span>
+                    <span>Connect in New Tab</span>
                   </button>
                 )}
               </div>
@@ -421,13 +443,10 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
               </div>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => {
-                    setSelectedConnectProvider('cursor');
-                    setIsMultiModalOpen(true);
-                  }}
+                  onClick={() => window.open('/auth/connect?provider=cursor', '_blank')}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs"
                 >
-                  {activeProvider === 'cursor' ? 'Active' : 'Connect'}
+                  {activeProvider === 'cursor' ? 'Active' : 'Connect in New Tab'}
                 </button>
               </div>
             </div>
@@ -463,13 +482,10 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
               </div>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => {
-                    setSelectedConnectProvider('claude');
-                    setIsMultiModalOpen(true);
-                  }}
+                  onClick={() => window.open('/auth/connect?provider=claude', '_blank')}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
                 >
-                  {activeProvider === 'claude' ? 'Active' : 'Connect'}
+                  {activeProvider === 'claude' ? 'Active' : 'Connect in New Tab'}
                 </button>
               </div>
             </div>
@@ -505,13 +521,10 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
               </div>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => {
-                    setSelectedConnectProvider('codex');
-                    setIsMultiModalOpen(true);
-                  }}
+                  onClick={() => window.open('/auth/connect?provider=codex', '_blank')}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                 >
-                  {activeProvider === 'codex' ? 'Active' : 'Connect'}
+                  {activeProvider === 'codex' ? 'Active' : 'Connect in New Tab'}
                 </button>
               </div>
             </div>

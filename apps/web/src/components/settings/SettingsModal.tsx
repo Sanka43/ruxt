@@ -22,7 +22,8 @@ import {
   Layers,
   Sparkles,
   Server,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import { Agent, ProviderStatus } from '../../types';
 import { AntigravityConnectModal } from '../providers/AntigravityConnectModal';
@@ -100,13 +101,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Load providers and stats on open
+  // Load providers and stats on open + listen to cross-tab auth completions
   useEffect(() => {
     if (isOpen) {
       fetchProviders();
       fetchSystemStats();
       fetchAntigravityStatus();
     }
+
+    const handleCrossTabAuth = (e: any) => {
+      const data = e?.data;
+      if (data?.type === 'AUTH_SUCCESS' && data?.provider) {
+        fetchProviders();
+        fetchAntigravityStatus();
+        onProviderChanged(data.provider);
+        showNotice(`${data.provider.toUpperCase()} Linked & Activated via New Tab!`);
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('ruxt_auth_channel');
+      channel.onmessage = handleCrossTabAuth;
+    } catch (_) {}
+
+    window.addEventListener('message', handleCrossTabAuth);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('message', handleCrossTabAuth);
+    };
   }, [isOpen]);
 
   // Handle escape key
@@ -626,8 +650,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           key={p.id}
                           onClick={() => {
                             if (p.connectType && !isActive) {
-                              setMultiConnectProvider(p.connectType);
-                              setIsMultiConnectModalOpen(true);
+                              window.open(`/auth/connect?provider=${p.connectType}`, '_blank');
                             } else {
                               handleSetActiveProvider(p.id);
                             }
@@ -681,12 +704,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <button
                     onClick={() => {
-                      setMultiConnectProvider('antigravity_pro');
-                      setIsMultiConnectModalOpen(true);
+                      window.open('/auth/connect?provider=antigravity_pro', '_blank');
                     }}
-                    className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/30 shrink-0 ml-3"
+                    className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/30 shrink-0 ml-3 flex items-center space-x-1.5"
                   >
-                    Open Connect Hub
+                    <span>Open Auth in New Tab</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -739,10 +762,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => setIsAntigravityModalOpen(true)}
-                          className="px-3.5 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-medium transition"
+                          onClick={() => window.open('/auth/connect?provider=antigravity_pro', '_blank')}
+                          className="px-3.5 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-medium transition flex items-center space-x-1.5"
                         >
-                          Switch Account / Change Model
+                          <span>Switch Account (New Tab)</span>
+                          <ExternalLink className="w-3 h-3" />
                         </button>
                         <button
                           onClick={handleDisconnectAntigravity}
@@ -755,15 +779,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ) : (
                     <div className="space-y-3 pt-1">
                       <p className="text-[11px] text-slate-300 leading-relaxed">
-                        Purchased an Antigravity Pro subscription? Connect your registered email to link your RuXt workspace to Antigravity's high-speed neural models and autonomous thinking pipeline.
+                        Purchased an Antigravity Pro subscription? Open the single sign-on screen in a new tab to authorize your account and activate DeepMind neural models.
                       </p>
                       <button
-                        onClick={() => setIsAntigravityModalOpen(true)}
-                        className="py-2 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 flex items-center space-x-2"
+                        onClick={() => window.open('/auth/connect?provider=antigravity_pro', '_blank')}
+                        className="py-2.5 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 flex items-center space-x-2 cursor-pointer"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>Connect Antigravity Account</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Sign-in with Mail / Google in New Tab</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   )}
