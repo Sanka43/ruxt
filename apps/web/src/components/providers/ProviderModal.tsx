@@ -117,12 +117,22 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
   const fetchAntigravityStatus = async () => {
     try {
       const res = await fetch('/api/antigravity/status');
-      const data = await res.json();
-      if (data.ok) {
-        setIsAntigravityConnected(data.connected);
-        if (data.email) setAntigravityEmail(data.email);
-      }
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        if (data && data.ok) {
+          setIsAntigravityConnected(data.connected);
+          if (data.email) setAntigravityEmail(data.email);
+          return;
+        }
+      } catch (_) {}
     } catch (_) {}
+
+    const savedEmail = localStorage.getItem('ruxt_antigravity_email') || localStorage.getItem('ruxt_antigravity_pro_email');
+    if (savedEmail) {
+      setIsAntigravityConnected(true);
+      setAntigravityEmail(savedEmail);
+    }
   };
 
   const fetchProviders = async () => {

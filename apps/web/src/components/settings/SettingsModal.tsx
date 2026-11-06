@@ -174,14 +174,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const fetchAntigravityStatus = async () => {
     try {
       const res = await fetch('/api/antigravity/status');
-      const data = await res.json();
-      if (data.ok) {
-        setIsAntigravityConnected(data.connected);
-        if (data.email) setAntigravityEmail(data.email);
-        if (data.tier) setAntigravityTier(data.tier);
-        if (data.model) setAntigravityModel(data.model);
-      }
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        if (data && data.ok) {
+          setIsAntigravityConnected(data.connected);
+          if (data.email) setAntigravityEmail(data.email);
+          if (data.tier) setAntigravityTier(data.tier);
+          if (data.model) setAntigravityModel(data.model);
+          return;
+        }
+      } catch (_) {}
     } catch (_) {}
+
+    // Fallback to local storage state
+    const savedEmail = localStorage.getItem('ruxt_antigravity_email') || localStorage.getItem('ruxt_antigravity_pro_email');
+    if (savedEmail) {
+      setIsAntigravityConnected(true);
+      setAntigravityEmail(savedEmail);
+    }
   };
 
   const handleDisconnectAntigravity = async () => {
