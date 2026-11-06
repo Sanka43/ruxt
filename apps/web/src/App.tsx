@@ -49,6 +49,10 @@ export function App() {
   const [isProviderModalOpen, setIsProviderModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [activeProvider, setActiveProvider] = useState<string>('simulator');
+  const [isTunnelConnected, setIsTunnelConnected] = useState<boolean>(() => {
+    return localStorage.getItem('ruxt_tunnel_connected') === 'true';
+  });
+  const [tunnelInfo, setTunnelInfo] = useState<{ clientCount?: number; tools?: any }>({});
   const [activeForumHub, setActiveForumHub] = useState<'work' | 'decision' | 'fun'>('work');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>(() => currentUser?.name || 'User');
@@ -282,6 +286,16 @@ export function App() {
         if (data.activeProvider) setActiveProvider(data.activeProvider);
       })
       .catch(() => {});
+    fetch('/api/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.activeProvider) setActiveProvider(data.activeProvider);
+        if (data.tunnelConnected !== undefined) {
+          setIsTunnelConnected(Boolean(data.tunnelConnected));
+          localStorage.setItem('ruxt_tunnel_connected', String(Boolean(data.tunnelConnected)));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Sync threads to localStorage
@@ -378,6 +392,11 @@ export function App() {
             fetchAgents();
           } else if (evt === 'provider:active') {
             setActiveProvider(payload.activeProvider);
+          } else if (evt === 'tunnel:status') {
+            const isConn = Boolean(payload.connected);
+            setIsTunnelConnected(isConn);
+            localStorage.setItem('ruxt_tunnel_connected', String(isConn));
+            setTunnelInfo({ clientCount: payload.clientCount, tools: payload.tools });
           }
         } catch (_) {}
       };
@@ -586,6 +605,8 @@ export function App() {
           onToggleFullscreen={handleToggleFullscreen}
           currentUser={currentUser}
           onLogout={handleLogout}
+          isTunnelConnected={isTunnelConnected}
+          tunnelInfo={tunnelInfo}
         />
 
         {/* Dynamic Views */}

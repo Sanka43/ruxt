@@ -1,6 +1,17 @@
 import React from 'react';
 import { Agent, User } from '../../types';
-import { Columns, Terminal, Zap, Maximize2, Minimize2, PanelLeftOpen, PanelLeftClose, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import {
+  Columns,
+  Terminal,
+  Zap,
+  Maximize2,
+  Minimize2,
+  PanelLeftOpen,
+  PanelLeftClose,
+  Settings as SettingsIcon,
+  LogOut,
+  Brain
+} from 'lucide-react';
 
 interface HeaderProps {
   agent: Agent | null;
@@ -17,6 +28,8 @@ interface HeaderProps {
   onToggleFullscreen?: () => void;
   currentUser?: User | null;
   onLogout?: () => void;
+  isTunnelConnected?: boolean;
+  tunnelInfo?: { clientCount?: number; tools?: any };
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,7 +46,9 @@ export const Header: React.FC<HeaderProps> = ({
   isFullscreen,
   onToggleFullscreen,
   currentUser,
-  onLogout
+  onLogout,
+  isTunnelConnected = false,
+  tunnelInfo = {}
 }) => {
   const getPageTitle = () => {
     switch (currentView) {
@@ -59,6 +74,54 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Home';
     }
   };
+
+  const getBrainInfo = () => {
+    switch (activeProvider) {
+      case 'gemini':
+        return {
+          title: 'Google Gemini Pro',
+          eyebrow: 'NEURAL CLOUD',
+          color: '#1967ff',
+          bg: 'rgba(25, 103, 255, 0.12)',
+          border: 'rgba(25, 103, 255, 0.35)'
+        };
+      case 'openai':
+        return {
+          title: 'OpenAI GPT-4o',
+          eyebrow: 'NEURAL CLOUD',
+          color: '#10a37f',
+          bg: 'rgba(16, 163, 127, 0.12)',
+          border: 'rgba(16, 163, 127, 0.35)'
+        };
+      case 'ollama':
+        return {
+          title: 'Local Ollama',
+          eyebrow: 'NEURAL LOCAL',
+          color: '#f59e0b',
+          bg: 'rgba(245, 158, 11, 0.12)',
+          border: 'rgba(245, 158, 11, 0.35)'
+        };
+      case 'antigravity':
+        return {
+          title: 'Antigravity IDE',
+          eyebrow: 'LOCAL AGENT BRAIN',
+          color: '#8b5cf6',
+          bg: 'rgba(139, 92, 246, 0.12)',
+          border: 'rgba(139, 92, 246, 0.35)'
+        };
+      case 'simulator':
+      default:
+        return {
+          title: 'Simulated Engine',
+          eyebrow: 'ZERO-SETUP OFFLINE',
+          color: '#6366f1',
+          bg: 'rgba(99, 102, 241, 0.12)',
+          border: 'rgba(99, 102, 241, 0.35)'
+        };
+    }
+  };
+
+  const brain = getBrainInfo();
 
   return (
     <header
@@ -113,18 +176,70 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Tools & Status Bar */}
       <div className="flex items-center space-x-2 sm:space-x-2.5">
-        {/* Antigravity / Tools Connection Status */}
-        <div
-          className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full border text-[11px] font-mono select-none"
+        {/* Main Connected Brain Badge */}
+        <button
+          onClick={onOpenProviderModal}
+          className="flex items-center space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl border transition cursor-pointer shadow-xs hover:opacity-95 active:scale-98"
           style={{
-            borderColor: 'var(--line)',
-            backgroundColor: 'color-mix(in srgb, var(--bg) 70%, var(--surface))',
-            color: 'var(--muted)'
+            borderColor: brain.border,
+            backgroundColor: brain.bg,
+            color: 'var(--ink)'
           }}
+          title="Click to view or switch connected AI Brain & Model Providers"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Bridge Ready</span>
-        </div>
+          <div className="relative flex items-center justify-center">
+            <Brain className="w-4 h-4 shrink-0" style={{ color: brain.color }} />
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-black animate-pulse"
+              style={{ backgroundColor: brain.color }}
+            />
+          </div>
+          <div className="flex flex-col text-left leading-none space-y-0.5">
+            <div className="flex items-center space-x-1">
+              <span className="text-[9px] font-mono tracking-wider font-bold uppercase" style={{ color: brain.color }}>
+                MAIN BRAIN
+              </span>
+              <span className="text-[9px] opacity-40 hidden sm:inline">•</span>
+              <span className="text-[9px] opacity-75 font-mono hidden sm:inline uppercase" style={{ color: 'var(--muted)' }}>
+                {brain.eyebrow}
+              </span>
+            </div>
+            <span className="text-xs font-bold truncate max-w-[105px] sm:max-w-[150px]">
+              {brain.title}
+            </span>
+          </div>
+        </button>
+
+        {/* IDE Bridge Status Indicator */}
+        {isTunnelConnected ? (
+          <div
+            onClick={onOpenProviderModal}
+            className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono cursor-pointer select-none transition hover:opacity-90 shadow-xs"
+            style={{
+              borderColor: '#10b98140',
+              backgroundColor: '#10b98115',
+              color: '#10b981'
+            }}
+            title="Local IDE Outbound WebSocket Tunnel is Live (Antigravity / Cursor / CLI)"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-semibold">IDE: Live</span>
+          </div>
+        ) : (
+          <button
+            onClick={onOpenProviderModal}
+            className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono select-none hover:opacity-85 transition cursor-pointer"
+            style={{
+              borderColor: 'var(--line)',
+              backgroundColor: 'color-mix(in srgb, var(--bg) 70%, var(--surface))',
+              color: 'var(--muted)'
+            }}
+            title="Click to connect Local IDE Bridge via Outbound Tunnel"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            <span>IDE: Standby</span>
+          </button>
+        )}
 
         {/* Quick Command switcher pill (Ctrl+K) */}
         <button
@@ -144,32 +259,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Ctrl+K
           </kbd>
-        </button>
-
-        {/* AI Engine & Model Provider Selector Badge */}
-        <button
-          onClick={onOpenProviderModal}
-          className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition cursor-pointer shadow-xs"
-          style={{
-            borderColor: 'color-mix(in srgb, var(--accent) 35%, var(--line))',
-            backgroundColor: 'var(--accent-soft)',
-            color: 'var(--accent)'
-          }}
-          title="Configure AI engines (Simulator, Gemini, Ollama, Outbound Tunnel)"
-        >
-          <Zap className="w-3 h-3 fill-current" />
-          <span className="capitalize hidden sm:inline font-semibold">
-            {activeProvider === 'simulator'
-              ? 'Simulated Engine'
-              : activeProvider === 'gemini'
-              ? 'Gemini Pro'
-              : activeProvider === 'openai'
-              ? 'OpenAI GPT-4o'
-              : activeProvider === 'ollama'
-              ? 'Local Ollama'
-              : activeProvider}
-          </span>
-          <span className="sm:hidden font-mono uppercase text-[10px]">{activeProvider.slice(0, 3)}</span>
         </button>
 
         {/* Interactive Canvas Toggle (if active in workspace and supports canvas) */}
