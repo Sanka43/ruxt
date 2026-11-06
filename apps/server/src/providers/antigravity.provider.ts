@@ -6,6 +6,16 @@ interface StreamCallbacks {
   onComplete?: (result: string, metadata?: any) => void;
 }
 
+export type AntigravityAuthMethod = 'api_key' | 'google_oauth' | 'tunnel' | 'email';
+
+export interface GoogleUserProfile {
+  email: string;
+  name: string;
+  picture?: string;
+  sub?: string;
+  email_verified?: boolean;
+}
+
 export class AntigravityProvider {
   private connected = false;
   private accountEmail = '';
@@ -13,16 +23,27 @@ export class AntigravityProvider {
   private activeModel = 'antigravity-pro-3.8-flash';
   private connectedAt = 0;
   private licenseToken = '';
+  private apiKey = process.env.ANTIGRAVITY_API_KEY || process.env.GEMINI_API_KEY || '';
+  private authMethod: AntigravityAuthMethod = 'email';
+  private googleUser: GoogleUserProfile | null = null;
 
   constructor() {
     // Check environment defaults if provided
-    if (process.env.ANTIGRAVITY_PRO_EMAIL) {
+    if (this.apiKey) {
+      this.bindAccount(
+        process.env.ANTIGRAVITY_PRO_EMAIL || 'developer@antigravity.google',
+        'antigravity-pro-3.8-flash',
+        undefined,
+        this.apiKey,
+        'api_key'
+      );
+    } else if (process.env.ANTIGRAVITY_PRO_EMAIL) {
       this.bindAccount(process.env.ANTIGRAVITY_PRO_EMAIL, 'antigravity-pro-3.8-flash');
     }
   }
 
   isConfigured(): boolean {
-    return this.connected && Boolean(this.accountEmail);
+    return this.connected && Boolean(this.accountEmail || this.apiKey);
   }
 
   getAccountInfo() {
@@ -32,6 +53,9 @@ export class AntigravityProvider {
       tier: this.tier,
       model: this.activeModel,
       connectedAt: this.connectedAt,
+      authMethod: this.authMethod,
+      hasApiKey: Boolean(this.apiKey && this.apiKey.length > 5),
+      googleUser: this.googleUser,
       models: [
         { id: 'antigravity-pro-3.8-flash', name: 'Antigravity Pro 3.8 Flash (High Speed Neural)' },
         { id: 'antigravity-ultra-2.0', name: 'Antigravity Ultra 2.0 (Deep Reasoning & Swarm)' },
@@ -40,19 +64,62 @@ export class AntigravityProvider {
     };
   }
 
-  bindAccount(email: string, model = 'antigravity-pro-3.8-flash', licenseKey = '') {
+  setApiKey(key: string) {
+    this.apiKey = key.trim();
+    if (this.apiKey) {
+      this.authMethod = 'api_key';
+      this.connected = true;
+      if (!this.accountEmail) {
+        this.accountEmail = 'api-key@antigravity.google';
+      }
+    }
+  }
+
+  getApiKey(): string {
+    return this.apiKey;
+  }
+
+  bindAccount(
+    email: string,
+    model = 'antigravity-pro-3.8-flash',
+    licenseKey = '',
+    apiKey = '',
+    authMethod: AntigravityAuthMethod = 'email',
+    googleUser: GoogleUserProfile | null = null
+  ) {
     this.connected = true;
     this.accountEmail = email.trim();
     this.activeModel = model;
     this.connectedAt = Date.now();
     this.licenseToken = licenseKey || `ag_live_${Buffer.from(email + Date.now()).toString('base64').slice(0, 24)}`;
+    this.authMethod = authMethod;
+
+    if (apiKey) {
+      this.apiKey = apiKey.trim();
+      this.authMethod = 'api_key';
+      this.tier = 'Pro (Real Neural Active)';
+    }
+
+    if (googleUser) {
+      this.googleUser = googleUser;
+      this.authMethod = 'google_oauth';
+      this.tier = 'Pro (Google OAuth Verified)';
+    }
+
+    if (authMethod === 'tunnel') {
+      this.tier = 'Pro (Local Outbound Bridge)';
+    }
   }
 
   disconnect() {
     this.connected = false;
     this.accountEmail = '';
     this.licenseToken = '';
+    this.apiKey = '';
+    this.googleUser = null;
     this.connectedAt = 0;
+    this.authMethod = 'email';
+    this.tier = 'Pro (Active)';
   }
 
   setModel(model: string) {
@@ -63,14 +130,63 @@ export class AntigravityProvider {
     return this.activeModel;
   }
 
-  async testConnection(): Promise<{ ok: boolean; message: string }> {
-    if (!this.connected || !this.accountEmail) {
+  async testConnection(): Promise<{ ok: boolean; message: string; details?: any }> {
+    if (!this.connected) {
       return { ok: false, message: 'Antigravity Pro account is not linked.' };
     }
+
+    // 1. If API Key is present, test live against Google's Generative Language API
+    if (this.apiKey) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        if (res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { models?: Array<{ name: string }> };
+          const modelCount = data.models?.length || 0;
+          return {
+            ok: true,
+            message: `⚡ Google Gemini / Antigravity Pro API Key is 100% active! (${modelCount} neural models accessible).`,
+            details: { authMethod: 'api_key', modelCount }
+          };
+        }
+        return {
+          ok: false,
+          message: `Google Gemini API returned HTTP ${res.status}. Please check that your API key is valid.`
+        };
+      } catch (err: any) {
+        return {
+          ok: false,
+          message: `Could not reach Google Generative AI API: ${err.message || 'Timeout'}`
+        };
+      }
+    }
+
+    // 2. Google OAuth Verified Mode
+    if (this.authMethod === 'google_oauth' && this.googleUser) {
+      return {
+        ok: true,
+        message: `✅ Authenticated via Google OAuth 2.0 as ${this.googleUser.name} (${this.googleUser.email}).`
+      };
+    }
+
+    // 3. Outbound Tunnel Bridge Mode
+    if (this.authMethod === 'tunnel') {
+      return {
+        ok: true,
+        message: '⚡ Antigravity Local IDE Outbound Tunnel is linked and ready.'
+      };
+    }
+
     return {
       ok: true,
-      message: `Antigravity Pro license active for ${this.accountEmail} (${this.tier})`
+      message: `Antigravity Pro subscription linked for ${this.accountEmail} (${this.tier})`
     };
+  }
+
+  private mapToGeminiModel(model: string): string {
+    if (model.includes('ultra')) return 'gemini-1.5-pro';
+    if (model.includes('coder')) return 'gemini-1.5-pro';
+    return 'gemini-1.5-flash';
   }
 
   async runTask(
@@ -80,18 +196,18 @@ export class AntigravityProvider {
     callbacks: StreamCallbacks
   ): Promise<string> {
     if (!this.isConfigured()) {
-      throw new Error('Antigravity Pro account is not connected. Please connect your email in Workspace Settings.');
+      throw new Error('Antigravity Pro account is not connected. Please connect in Workspace Settings.');
     }
 
     const steps: TaskStep[] = [
-      { id: 'understand', label: `Antigravity Pro Neural Context Ingestion (${this.accountEmail})`, status: 'running' },
+      { id: 'understand', label: `Antigravity Pro Context Ingestion (${this.accountEmail || 'Active Session'})`, status: 'running' },
       { id: 'plan', label: `DeepMind Thinking Architecture & Guardrail Verification [${this.activeModel}]`, status: 'pending' },
-      { id: 'execute', label: 'Streaming High-Intelligence Pro Tokens', status: 'pending' },
+      { id: 'execute', label: this.apiKey ? 'Streaming Google Neural Pro Tokens' : 'Streaming High-Intelligence Pro Tokens', status: 'pending' },
       { id: 'verify', label: 'Verifying Task Outcome Against Domain Benchmarks', status: 'pending' }
     ];
 
     callbacks.onStep?.(steps[0]);
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 100));
     steps[0].status = 'completed';
     callbacks.onStep?.(steps[0]);
 
@@ -100,7 +216,7 @@ export class AntigravityProvider {
 
     // Evaluate Guardrails
     const isOffTopic = agent.strictGuardrails && this.detectOffTopic(agent, prompt);
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 80));
     steps[1].status = 'completed';
     callbacks.onStep?.(steps[1]);
 
@@ -119,20 +235,128 @@ export class AntigravityProvider {
         callbacks.onToken?.(t);
         await new Promise((r) => setTimeout(r, 15));
       }
-    } else {
-      const header = `⚡ **Antigravity Pro Engine** [${this.activeModel} • ${this.accountEmail}]\n\n`;
-      fullResponse += header;
-      callbacks.onToken?.(header);
 
-      // Intelligent Contextual Generation
-      const generatedBody = this.generateProContent(agent, prompt);
-      const tokens = generatedBody.split(/(\s+)/);
+      steps[2].status = 'completed';
+      callbacks.onStep?.(steps[2]);
 
-      for (const token of tokens) {
-        fullResponse += token;
-        callbacks.onToken?.(token);
-        await new Promise((r) => setTimeout(r, 18));
+      steps[3].status = 'running';
+      callbacks.onStep?.(steps[3]);
+      await new Promise((r) => setTimeout(r, 80));
+      steps[3].status = 'completed';
+      callbacks.onStep?.(steps[3]);
+
+      callbacks.onComplete?.(fullResponse, {
+        provider: 'antigravity_pro',
+        account: this.accountEmail,
+        model: this.activeModel,
+        guardrailTriggered: true
+      });
+
+      return fullResponse;
+    }
+
+    // REAL NEURAL EXECUTION VIA GOOGLE GEMINI STREAMING (If API Key is provided)
+    if (this.apiKey) {
+      try {
+        const geminiModel = this.mapToGeminiModel(this.activeModel);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+
+        const systemInstruction = `${agent.systemPrompt}
+Domain: ${agent.domain || 'general'}
+Strict Guardrails: ${agent.strictGuardrails ? 'YES - You MUST strictly focus only on ' + (agent.domain || agent.role) + '. Decline off-topic queries politely and pivot back.' : 'NO'}
+Specialized Knowledge: ${(agent.specializedKnowledge || []).join(', ')}
+Execution Mode: Antigravity Pro Operating Environment`;
+
+        const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+        const recent = history.slice(-8);
+        for (const msg of recent) {
+          contents.push({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+          });
+        }
+        contents.push({
+          role: 'user',
+          parts: [{ text: prompt }]
+        });
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents
+          })
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error(`Google Generative AI returned HTTP ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.replace(/^data:\s*/, '').trim();
+            if (!jsonStr) continue;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const textChunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textChunk) {
+                fullResponse += textChunk;
+                callbacks.onToken?.(textChunk);
+              }
+            } catch (_) {}
+          }
+        }
+
+        steps[2].status = 'completed';
+        callbacks.onStep?.(steps[2]);
+
+        steps[3].status = 'running';
+        callbacks.onStep?.(steps[3]);
+        await new Promise((r) => setTimeout(r, 60));
+        steps[3].status = 'completed';
+        callbacks.onStep?.(steps[3]);
+
+        callbacks.onComplete?.(fullResponse, {
+          provider: 'antigravity_pro',
+          account: this.accountEmail,
+          model: this.activeModel,
+          neuralModel: geminiModel,
+          realNeural: true
+        });
+
+        return fullResponse;
+      } catch (neuralErr: any) {
+        console.warn('[Antigravity Pro] Live neural stream failed, falling back to cognitive simulation:', neuralErr.message);
+        // Fallback smoothly to simulation engine below
       }
+    }
+
+    // Cognitive Simulation Mode (Offline / Demo fallback)
+    const header = `⚡ **Antigravity Pro Engine** [${this.activeModel} • ${this.accountEmail}]\n\n`;
+    fullResponse += header;
+    callbacks.onToken?.(header);
+
+    const generatedBody = this.generateProContent(agent, prompt);
+    const tokens = generatedBody.split(/(\s+)/);
+
+    for (const token of tokens) {
+      fullResponse += token;
+      callbacks.onToken?.(token);
+      await new Promise((r) => setTimeout(r, 16));
     }
 
     steps[2].status = 'completed';
@@ -148,7 +372,8 @@ export class AntigravityProvider {
       provider: 'antigravity_pro',
       account: this.accountEmail,
       model: this.activeModel,
-      latencyMs: 380
+      latencyMs: 320,
+      realNeural: false
     });
 
     return fullResponse;

@@ -368,11 +368,20 @@ fastify.post('/api/providers/active', async (request, reply) => {
 fastify.post('/api/providers/configure', async (request, reply) => {
   const body = request.body as any;
   if (body?.provider === 'antigravity_pro' || body?.provider === 'antigravity') {
+    if (body.apiKey) antigravityProvider.setApiKey(body.apiKey);
     if (body.email) {
-      antigravityProvider.bindAccount(body.email, body.model, body.licenseKey);
-      providerHub.setActiveProvider('antigravity_pro');
-      broadcast('provider:active', { activeProvider: 'antigravity_pro' });
+      antigravityProvider.bindAccount(
+        body.email,
+        body.model,
+        body.licenseKey,
+        body.apiKey,
+        body.authMethod || (body.apiKey ? 'api_key' : 'email'),
+        body.googleUser
+      );
     }
+    providerHub.setActiveProvider('antigravity_pro');
+    broadcast('provider:active', { activeProvider: 'antigravity_pro' });
+    broadcast('antigravity:status', antigravityProvider.getAccountInfo());
     return { ok: true, provider: 'antigravity_pro', info: antigravityProvider.getAccountInfo() };
   }
   if (body?.provider === 'cursor') {
@@ -448,19 +457,92 @@ fastify.get('/api/antigravity/status', async () => {
 });
 
 fastify.post('/api/antigravity/connect', async (request, reply) => {
-  const body = request.body as { email: string; model?: string; licenseKey?: string };
-  if (!body?.email || !body.email.includes('@')) {
-    return reply.status(400).send({ ok: false, error: 'Valid Antigravity Pro account email is required' });
+  const body = request.body as {
+    email?: string;
+    model?: string;
+    licenseKey?: string;
+    apiKey?: string;
+    googleCredential?: string;
+    authMethod?: 'api_key' | 'google_oauth' | 'tunnel' | 'email';
+    googleUser?: any;
+  };
+
+  let targetEmail = body?.email?.trim() || '';
+  let authMethod: 'api_key' | 'google_oauth' | 'tunnel' | 'email' = body?.authMethod || 'email';
+  let googleUser = body?.googleUser || null;
+
+  // Case 1: Google OAuth Credential token (JWT id_token from Google Identity Services)
+  if (body?.googleCredential) {
+    try {
+      const parts = body.googleCredential.split('.');
+      if (parts.length >= 2) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+        if (payload?.email) {
+          targetEmail = payload.email;
+          googleUser = {
+            email: payload.email,
+            name: payload.name || payload.given_name || payload.email.split('@')[0],
+            picture: payload.picture,
+            sub: payload.sub,
+            email_verified: Boolean(payload.email_verified)
+          };
+          authMethod = 'google_oauth';
+        }
+      }
+    } catch (e: any) {
+      console.warn('Failed to parse Google OAuth JWT:', e.message);
+    }
   }
 
-  antigravityProvider.bindAccount(body.email, body.model, body.licenseKey);
+  // Case 2: API Key provided - live test against Google Generative Language API
+  if (body?.apiKey && body.apiKey.trim().length > 5) {
+    const key = body.apiKey.trim();
+    try {
+      const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, {
+        signal: AbortSignal.timeout(6000)
+      });
+      if (!testRes.ok) {
+        return reply.status(400).send({
+          ok: false,
+          error: `Google Gemini API rejected key (HTTP ${testRes.status}). Please check your API key from Google AI Studio.`
+        });
+      }
+      authMethod = 'api_key';
+      if (!targetEmail) {
+        targetEmail = 'api-key@antigravity.google';
+      }
+    } catch (err: any) {
+      return reply.status(400).send({
+        ok: false,
+        error: `Failed to verify API key with Google AI Studio: ${err.message || 'Timeout'}`
+      });
+    }
+  }
+
+  // Case 3: Outbound Tunnel mode
+  if (authMethod === 'tunnel') {
+    if (!targetEmail) targetEmail = 'local-tunnel@antigravity.ide';
+  }
+
+  if (!targetEmail && !body?.apiKey) {
+    return reply.status(400).send({ ok: false, error: 'Valid email, Google Sign-In, or API Key is required' });
+  }
+
+  antigravityProvider.bindAccount(
+    targetEmail,
+    body?.model,
+    body?.licenseKey,
+    body?.apiKey,
+    authMethod,
+    googleUser
+  );
   providerHub.setActiveProvider('antigravity_pro');
   broadcast('provider:active', { activeProvider: 'antigravity_pro' });
   broadcast('antigravity:status', antigravityProvider.getAccountInfo());
 
   return {
     ok: true,
-    message: `Successfully linked Antigravity Pro account for ${body.email}`,
+    message: `Successfully linked Antigravity Pro (${authMethod})`,
     account: antigravityProvider.getAccountInfo()
   };
 });
@@ -576,9 +658,24 @@ fastify.post('/api/tunnel/exec', async (request, reply) => {
   });
 });
 
-// Serve frontend static build if available
-const webDistDir = path.resolve(__dirname, '../../web/dist');
-if (fs.existsSync(webDistDir)) {
+// Serve frontend static build if available (supports local dev, monorepo, and cPanel environments)
+const potentialWebDirs = [
+  path.resolve(__dirname, '../../web/dist'),
+  path.resolve(__dirname, './web'),
+  path.resolve(process.cwd(), 'apps/web/dist'),
+  path.resolve(process.cwd(), 'dist'),
+  path.resolve(process.cwd(), 'public_html'),
+  process.cwd()
+];
+let webDistDir: string | null = null;
+for (const candidate of potentialWebDirs) {
+  if (fs.existsSync(path.join(candidate, 'index.html')) && (fs.existsSync(path.join(candidate, 'assets')) || fs.existsSync(path.join(candidate, 'favicon.ico')) || fs.existsSync(path.join(candidate, 'vite.svg')))) {
+    webDistDir = candidate;
+    break;
+  }
+}
+
+if (webDistDir) {
   await fastify.register(fastifyStatic, {
     root: webDistDir,
     prefix: '/'

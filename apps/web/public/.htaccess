@@ -1,15 +1,39 @@
+# RuXt Next-Gen cPanel & Apache Configuration
+# Supports Phusion Passenger, Apache Reverse Proxy, and SPA Routing
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # Do not rewrite /api or /ws requests to index.html
+  # 1. Reverse Proxy /api and /ws requests to Node.js backend if mod_proxy is active
+  <IfModule mod_proxy.c>
+    # Proxy /api requests to local Fastify backend port
+    RewriteCond %{REQUEST_URI} ^/api [NC]
+    RewriteRule ^api/(.*)$ http://127.0.0.1:1234/api/$1 [P,L]
+
+    # Proxy WebSocket /ws requests
+    RewriteCond %{REQUEST_URI} ^/ws [NC]
+    RewriteRule ^ws(.*)$ ws://127.0.0.1:1234/ws$1 [P,L]
+  </IfModule>
+
+  # 2. If mod_proxy is not enabled, do not rewrite /api or /ws to index.html
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^/ws [NC]
   RewriteRule ^ - [L]
 
+  # 3. Static files & React 19 SPA Fallback
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
   RewriteRule . /index.html [L]
 </IfModule>
+
+# Prevent browser caching of index.html so client gets updates immediately
+<Files "index.html">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </IfModule>
+</Files>

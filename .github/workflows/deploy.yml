@@ -8,7 +8,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🎉 Build & Deploy to cPanel
+    name: 🎉 Build & Deploy RuXt Full-Stack to cPanel
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +24,20 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔨 Build Frontend SPA
-        run: npm run build:web
+      - name: 🔨 Build Frontend SPA & Backend Server
+        run: npm run build
+
+      - name: 📦 Prepare Unified cPanel Deployment Bundle
+        run: |
+          mkdir -p .deploy/apps/server/dist
+          cp -r apps/web/dist/* .deploy/
+          cp -r apps/server/dist/* .deploy/apps/server/dist/
+          cp app.js .deploy/
+          cp package.json .deploy/
+          cp package-lock.json .deploy/
+          if [ -f apps/web/public/.htaccess ]; then
+            cp apps/web/public/.htaccess .deploy/.htaccess
+          fi
 
       - name: 📂 Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -34,6 +46,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: ${{ secrets.FTP_PORT || 21 }}
-          local-dir: ./apps/web/dist/
+          local-dir: .deploy/
           server-dir: ${{ secrets.FTP_SERVER_DIR || 'public_html/' }}
           dangerous-clean-slate: false

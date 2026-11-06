@@ -8,30 +8,43 @@ console.log(`======================================================\n`);
 
 function detectLocalTools() {
   const tools: Record<string, boolean> = {
-    antigravity: fs.existsSync('C:\\Users\\isank\\AppData\\Local\\Programs\\Antigravity IDE\\bin\\antigravity-ide.cmd') ||
-                 fs.existsSync('C:\\Users\\isank\\AppData\\Local\\Programs\\Antigravity IDE\\bin\\antigravity-ide'),
+    antigravity: false,
     cursor: false,
     claude: false,
-    ollama: false
+    codex: false,
+    ollama: false,
+    git: false,
+    node: true
   };
 
-  try {
-    const bin = process.platform === 'win32' ? 'where' : 'which';
-    execFileSync(bin, ['cursor'], { stdio: 'ignore' });
-    tools.cursor = true;
-  } catch (_) {}
+  const bin = process.platform === 'win32' ? 'where' : 'which';
 
-  try {
-    const bin = process.platform === 'win32' ? 'where' : 'which';
-    execFileSync(bin, ['claude'], { stdio: 'ignore' });
-    tools.claude = true;
-  } catch (_) {}
+  const checkCommand = (cmd: string): boolean => {
+    try {
+      execFileSync(bin, [cmd], { stdio: 'ignore' });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
 
-  try {
-    const bin = process.platform === 'win32' ? 'where' : 'which';
-    execFileSync(bin, ['ollama'], { stdio: 'ignore' });
-    tools.ollama = true;
-  } catch (_) {}
+  tools.antigravity = checkCommand('antigravity-ide') || checkCommand('agy') || checkCommand('antigravity');
+  if (!tools.antigravity && process.platform === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || '';
+    const userProfile = process.env.USERPROFILE || '';
+    tools.antigravity =
+      (Boolean(localAppData) && (
+        fs.existsSync(`${localAppData}\\Programs\\Antigravity IDE\\bin\\antigravity-ide.cmd`) ||
+        fs.existsSync(`${localAppData}\\Programs\\Antigravity IDE\\antigravity.exe`)
+      )) ||
+      (Boolean(userProfile) && fs.existsSync(`${userProfile}\\AppData\\Local\\Programs\\Antigravity IDE\\bin\\antigravity-ide.cmd`));
+  }
+
+  tools.cursor = checkCommand('cursor');
+  tools.claude = checkCommand('claude');
+  tools.codex = checkCommand('codex');
+  tools.ollama = checkCommand('ollama');
+  tools.git = checkCommand('git');
 
   return tools;
 }
